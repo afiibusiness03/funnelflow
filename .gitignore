@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Environment variables (SECRET - NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
+*.zip
+*.rar
+*.7z
+
+# Logs
+npm-debug.log*

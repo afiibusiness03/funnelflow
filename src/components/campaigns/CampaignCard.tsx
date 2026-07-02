@@ -1,0 +1,118 @@
+'use client'
+
+import Link from 'next/link'
+import { cn, conversionRate, formatDate } from '@/lib/utils/helpers'
+import { QrCode, Pause, Play, BarChart2, MoreHorizontal, Package, Pencil } from 'lucide-react'
+import { useState } from 'react'
+import type { Campaign } from '@/types/database'
+
+interface CampaignCardProps {
+  campaign: Campaign
+  onStatusChange?: (id: string, status: 'active' | 'paused') => void
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  active:   'bg-green-500/20 text-green-400',
+  paused:   'bg-yellow-500/20 text-yellow-400',
+  draft:    'bg-slate-500/20 text-slate-400',
+  archived: 'bg-red-500/20 text-red-400',
+}
+
+export default function CampaignCard({ campaign, onStatusChange }: CampaignCardProps) {
+  const [loading, setLoading] = useState(false)
+
+  const toggleStatus = async () => {
+    setLoading(true)
+    const newStatus = campaign.status === 'active' ? 'paused' : 'active'
+    try {
+      await fetch(`/api/campaigns/${campaign.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      onStatusChange?.(campaign.id, newStatus)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const rate = conversionRate(campaign.total_completions, campaign.total_scans)
+
+  return (
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600 transition-all group">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <QrCode className="w-4 h-4 text-purple-400" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-white font-medium text-sm truncate">{campaign.name}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLES[campaign.status] ?? STATUS_STYLES.draft)}>
+                {campaign.status}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white transition p-1">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Product */}
+      {campaign.product && (
+        <div className="flex items-center gap-2 mb-4 text-slate-500 text-xs">
+          <Package className="w-3 h-3" />
+          <span className="truncate">{campaign.product.name}</span>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {[
+          { label: 'Scans',       value: campaign.total_scans.toLocaleString() },
+          { label: 'Completions', value: campaign.total_completions.toLocaleString() },
+          { label: 'Conv. Rate',  value: `${rate}%` },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-slate-900 rounded-lg p-2 text-center">
+            <p className="text-white text-sm font-bold">{stat.value}</p>
+            <p className="text-slate-500 text-xs">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-slate-700">
+        <span className="text-slate-500 text-xs">{formatDate(campaign.created_at)}</span>
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/dashboard/campaigns/${campaign.id}/analytics`}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
+            title="Analytics"
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+          </Link>
+          <button
+            onClick={toggleStatus}
+            disabled={loading}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+            title={campaign.status === 'active' ? 'Pause' : 'Resume'}
+          >
+            {campaign.status === 'active'
+              ? <Pause className="w-3.5 h-3.5" />
+              : <Play  className="w-3.5 h-3.5" />
+            }
+          </button>
+          <Link
+            href={`/dashboard/campaigns/${campaign.id}`}
+            className="p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
+            title="Edit campaign"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
