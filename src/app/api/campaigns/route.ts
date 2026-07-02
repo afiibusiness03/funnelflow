@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     .eq('id', user.id).single()
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const tenant = userData.tenant as { brand_color: string; max_campaigns: number; plan: string } | null
+  const tenant = (userData.tenant as unknown) as { brand_color: string; max_campaigns: number; plan: string } | null
 
   // Check campaign limit
   const { count } = await supabase

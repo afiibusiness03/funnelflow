@@ -22,7 +22,7 @@ export default async function PromotionsPage() {
     .order('created_at', { ascending: false })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenant = userData.tenant as { max_promotions: number } | null
+  const tenant = (userData.tenant as unknown) as { max_promotions: number } | null
   const maxPromos = tenant?.max_promotions ?? 1
   const atLimit = (count ?? 0) >= maxPromos
 

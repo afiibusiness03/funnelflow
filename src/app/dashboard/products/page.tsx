@@ -22,7 +22,7 @@ export default async function ProductsPage() {
     .order('created_at', { ascending: false })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenant = userData.tenant as { max_products: number; plan: string } | null
+  const tenant = (userData.tenant as unknown) as { max_products: number; plan: string } | null
   const maxProducts = tenant?.max_products ?? 1
   const atLimit = (count ?? 0) >= maxProducts
 

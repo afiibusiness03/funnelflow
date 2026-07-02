@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   if (format === 'png') {
     const buffer = await generateQRPng({ shortCode: campaign.qr_short_code, color })
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'image/png',
         'Content-Disposition': `attachment; filename="qr-${campaign.qr_short_code}.png"`,
