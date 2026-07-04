@@ -159,12 +159,19 @@ async function deliverPromotion({ submission, campaign, customerEmail, supabase 
   }
 
   try {
-    const { data: emailResult } = await resend.emails.send({
-      from: FROM,
-      to: customerEmail,
-      subject,
-      html,
-    })
+    let resendId = null
+    let status = 'skipped'
+
+    if (customerEmail === 'afiibusiness03@gmail.com') {
+      const { data: emailResult } = await resend.emails.send({
+        from: FROM,
+        to: customerEmail,
+        subject,
+        html,
+      })
+      resendId = emailResult?.id ?? null
+      status = 'sent'
+    }
 
     // Record email delivery
     await supabase.from('email_deliveries').insert({
@@ -173,8 +180,8 @@ async function deliverPromotion({ submission, campaign, customerEmail, supabase 
       recipient_email: customerEmail,
       subject,
       template:      'promotion_delivery',
-      resend_id:     emailResult?.id ?? null,
-      status:        'sent',
+      resend_id:     resendId,
+      status:        status,
       sent_at:       new Date().toISOString(),
     })
 

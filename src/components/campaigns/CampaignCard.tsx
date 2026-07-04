@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { cn, conversionRate, formatDate } from '@/lib/utils/helpers'
-import { QrCode, Pause, Play, BarChart2, MoreHorizontal, Package, Pencil } from 'lucide-react'
+import { QrCode, Pause, Play, BarChart2, MoreHorizontal, Package, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Campaign } from '@/types/database'
 
@@ -19,6 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default function CampaignCard({ campaign, onStatusChange }: CampaignCardProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const toggleStatus = async () => {
@@ -31,6 +33,29 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
         body: JSON.stringify({ status: newStatus }),
       })
       onStatusChange?.(campaign.id, newStatus)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to permanently delete this campaign? This will also delete all associated stats and feedback submissions.')) {
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        router.refresh()
+      } else {
+        alert('Failed to delete campaign')
+      }
+    } catch (err) {
+      console.error('Delete error:', err)
     } finally {
       setLoading(false)
     }
@@ -110,6 +135,14 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
           >
             <Pencil className="w-3.5 h-3.5" />
           </Link>
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="p-1.5 text-slate-400 hover:text-red-450 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+            title="Delete campaign"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+          </button>
         </div>
       </div>
     </div>

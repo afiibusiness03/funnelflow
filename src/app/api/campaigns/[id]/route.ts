@@ -40,7 +40,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
 
   const { error } = await supabase
     .from('campaigns')
-    .update({ status: 'archived' })
+    .delete()
     .eq('id', params.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -66,7 +66,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
           </div>`
       }
 
-      await resend.emails.send({ from: FROM, to: submission.customer_email, subject, html })
+      let status = 'skipped'
+      if (submission.customer_email === 'afiibusiness03@gmail.com') {
+        await resend.emails.send({ from: FROM, to: submission.customer_email, subject, html })
+        status = 'sent'
+      }
 
       await service.from('email_deliveries').insert({
         tenant_id:      submission.tenant_id,
@@ -74,7 +78,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         recipient_email: submission.customer_email,
         subject,
         template:       'promotion_delivery',
-        status:         'sent',
+        status:         status,
         sent_at:        new Date().toISOString(),
       })
 

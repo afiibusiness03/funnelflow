@@ -91,6 +91,26 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
     setTimeout(() => router.push('/dashboard/campaigns'), 1000)
   }
 
+  const handleDeleteCampaign = async () => {
+    if (!confirm('Are you sure you want to permanently delete this campaign? This will also delete all associated stats and feedback submissions.')) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/campaigns/${params.id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        router.push('/dashboard/campaigns')
+        router.refresh()
+      } else {
+        alert('Failed to delete campaign')
+      }
+    } catch (err) {
+      console.error('Delete error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
@@ -229,19 +249,28 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Link href="/dashboard/campaigns" className="px-4 py-2 text-slate-400 hover:text-white text-sm transition">
-                Cancel
-              </Link>
+            <div className="flex items-center justify-between pt-2">
               <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
+                type="button"
+                onClick={handleDeleteCampaign}
+                className="text-red-400 hover:text-red-300 text-sm font-medium transition"
               >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                <Save className="w-4 h-4" />
-                {isSubmitting ? 'Saving…' : 'Save Changes'}
+                Delete Campaign
               </button>
+              <div className="flex items-center gap-3">
+                <Link href="/dashboard/campaigns" className="px-4 py-2 text-slate-400 hover:text-white text-sm transition">
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Save className="w-4 h-4" />
+                  {isSubmitting ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

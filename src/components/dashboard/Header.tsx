@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, Plus, Search } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, Plus, Search, Sun, Moon } from 'lucide-react'
 
 const PAGE_TITLES: Record<string, { title: string; description: string; action?: { label: string; href: string } }> = {
   '/dashboard':               { title: 'Dashboard',    description: 'Overview of your account' },
@@ -32,6 +33,29 @@ interface HeaderProps {
 export default function Header({ notifications = 0 }: HeaderProps) {
   const pathname = usePathname()
   const meta = getPageMeta(pathname)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null
+    const initial = stored || 'light'
+    setTheme(initial)
+    if (initial === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    setTheme(next)
+    localStorage.setItem('theme', next)
+    if (next === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
+  }
 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-6 flex-shrink-0">
@@ -48,6 +72,15 @@ export default function Header({ notifications = 0 }: HeaderProps) {
         {/* Search (future) */}
         <button className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition">
           <Search className="w-4 h-4" />
+        </button>
+
+        {/* Light/Dark Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition"
+          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+        >
+          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
 
         {/* Notifications */}
