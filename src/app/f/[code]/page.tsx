@@ -64,9 +64,23 @@ export default function FunnelPage() {
       .finally(() => setLoading(false))
   }, [code])
 
-  const brandColor  = campaign?.custom_color ?? campaign?.tenant?.brand_color ?? '#6366f1'
+  const brandColor  = campaign?.custom_color ?? campaign?.tenant?.brand_color ?? '#f97316'
   const logoUrl     = campaign?.custom_logo_url ?? campaign?.tenant?.logo_url
   const tenantName  = campaign?.tenant?.name ?? ''
+
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '249, 115, 22'
+  }
+
+  const darkenColor = (hex: string, percent: number): string => {
+    let num = parseInt(hex.replace("#",""), 16),
+      amt = Math.round(2.55 * percent),
+      R = (num >> 16) - amt,
+      G = (num >> 8 & 0x00FF) - amt,
+      B = (num & 0x0000FF) - amt;
+    return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+  }
 
   // Step 1 complete → go to feedback
   const handleOrderVerified = useCallback((data: CustomerData) => {
@@ -141,8 +155,15 @@ export default function FunnelPage() {
   const totalSteps = (campaign.smart_routing && campaign.review_url) ? 4 : 3
 
   return (
-    <FunnelLayout
-      brandColor={brandColor}
+    <div
+      style={{
+        '--brand-color': brandColor,
+        '--brand-color-dark': darkenColor(brandColor, 10),
+        '--brand-color-rgb': hexToRgb(brandColor),
+      } as React.CSSProperties}
+    >
+      <FunnelLayout
+        brandColor={brandColor}
       logoUrl={logoUrl}
       tenantName={tenantName}
       step={step < 4 ? step : undefined}
@@ -185,8 +206,11 @@ export default function FunnelPage() {
           couponCode={result?.couponCode ?? null}
           customerEmail={customer.email}
           tenantName={tenantName}
+          feedbackText={feedbackData?.feedbackText ?? null}
+          reviewUrl={campaign.review_url ?? null}
         />
       )}
     </FunnelLayout>
+    </div>
   )
 }

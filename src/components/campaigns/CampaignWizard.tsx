@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
 import { Check, Loader2, Package, Gift, Settings, QrCode, ChevronRight } from 'lucide-react'
 import type { Product, Promotion } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
 
 const schema = z.object({
   name:                     z.string().min(2, 'Campaign name is required'),
@@ -52,6 +53,114 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const [serverError, setServerError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [localProducts, setLocalProducts] = useState<Product[]>(products)
+  const [localPromotions, setLocalPromotions] = useState<Promotion[]>(promotions)
+
+  const [showNewProductModal, setShowNewProductModal] = useState(false)
+  const [showNewPromoModal, setShowNewPromoModal] = useState(false)
+  const [savingProduct, setSavingProduct] = useState(false)
+  const [savingPromo, setSavingPromo] = useState(false)
+
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    platform: 'amazon',
+    marketplace: 'US',
+    asin: '',
+    image_url: '',
+  })
+
+  const [newPromo, setNewPromo] = useState({
+    name: '',
+    type: 'coupon_code',
+    coupon_code: '',
+    download_url: '',
+    delivery_message: '',
+  })
+
+  const handleCreateProduct = async () => {
+    if (!newProduct.name) return
+    setSavingProduct(true)
+    const supabase = createClient()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single()
+      if (!userData?.tenant_id) return
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          tenant_id: userData.tenant_id,
+          name: newProduct.name,
+          platform: newProduct.platform,
+          marketplace: newProduct.marketplace,
+          asin: newProduct.asin || null,
+          image_url: newProduct.image_url || null,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        alert(error.message)
+      } else if (data) {
+        setLocalProducts(prev => [...prev, data as unknown as Product])
+        setValue('product_id', data.id)
+        setShowNewProductModal(false)
+        setNewProduct({ name: '', platform: 'amazon', marketplace: 'US', asin: '', image_url: '' })
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSavingProduct(false)
+    }
+  }
+
+  const handleCreatePromo = async () => {
+    if (!newPromo.name) return
+    setSavingPromo(true)
+    const supabase = createClient()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single()
+      if (!userData?.tenant_id) return
+
+      const { data, error } = await supabase
+        .from('promotions')
+        .insert({
+          tenant_id: userData.tenant_id,
+          name: newPromo.name,
+          type: newPromo.type,
+          coupon_code: newPromo.type === 'coupon_code' ? newPromo.coupon_code || null : null,
+          download_url: newPromo.type === 'digital_download' ? newPromo.download_url || null : null,
+          delivery_message: newPromo.delivery_message || null,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        alert(error.message)
+      } else if (data) {
+        setLocalPromotions(prev => [...prev, data as unknown as Promotion])
+        setValue('promotion_id', data.id)
+        setShowNewPromoModal(false)
+        setNewPromo({ name: '', type: 'coupon_code', coupon_code: '', download_url: '', delivery_message: '' })
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSavingPromo(false)
+    }
+  }
+
   const {
     register,
     handleSubmit,
@@ -74,8 +183,8 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const smartRouting        = watch('smart_routing')
   const threshold           = watch('smart_routing_threshold')
 
-  const selectedProduct   = products.find(p => p.id === selectedProductId)
-  const selectedPromotion = promotions.find(p => p.id === selectedPromotionId)
+  const selectedProduct   = localProducts.find(p => p.id === selectedProductId)
+  const selectedPromotion = localPromotions.find(p => p.id === selectedPromotionId)
 
   const nextStep = async () => {
     let fields: (keyof FormData)[] = []
@@ -167,19 +276,33 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Select Product <span className="text-red-400">*</span>
-                </label>
-                {products.length === 0 ? (
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-slate-300">
+                    Select Product <span className="text-red-400">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProductModal(true)}
+                    className="text-purple-400 hover:text-purple-300 text-xs font-semibold flex items-center gap-1 transition"
+                  >
+                    + Add New Product
+                  </button>
+                </div>
+
+                {localProducts.length === 0 ? (
                   <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 text-center">
                     <p className="text-slate-400 text-sm mb-2">No products yet.</p>
-                    <a href="/dashboard/products/new" className="text-purple-400 text-sm hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewProductModal(true)}
+                      className="text-purple-400 text-sm hover:underline font-medium"
+                    >
                       Add a product first →
-                    </a>
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {products.map((product) => (
+                    {localProducts.map((product) => (
                       <button
                         key={product.id}
                         type="button"
@@ -223,9 +346,18 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
           {/* ── Step 2: Promotion ────────────────────────────── */}
           {step === 2 && (
             <div className="space-y-5">
-              <div>
-                <h2 className="text-white font-semibold text-lg mb-1">Choose a promotion</h2>
-                <p className="text-slate-400 text-sm">What will you offer customers after they complete the funnel?</p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-white font-semibold text-lg mb-1">Choose a promotion</h2>
+                  <p className="text-slate-400 text-sm">What will you offer customers after they complete the funnel?</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewPromoModal(true)}
+                  className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-purple-500/20 transition flex-shrink-0"
+                >
+                  + Add New Promotion
+                </button>
               </div>
 
               <div className="space-y-2">
@@ -255,7 +387,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                   )} />
                 </button>
 
-                {promotions.map((promo) => (
+                {localPromotions.map((promo) => (
                   <button
                     key={promo.id}
                     type="button"
@@ -283,12 +415,16 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                   </button>
                 ))}
 
-                {promotions.length === 0 && (
+                {localPromotions.length === 0 && (
                   <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 text-center">
                     <p className="text-slate-400 text-sm mb-1">No promotions yet.</p>
-                    <a href="/dashboard/promotions/new" target="_blank" className="text-purple-400 text-sm hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPromoModal(true)}
+                      className="text-purple-400 text-sm hover:underline font-medium"
+                    >
                       Create a promotion →
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>
@@ -422,8 +558,6 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                     {selectedPromotion?.name ?? 'None'}
                   </span>
                 </div>
-
-                {/* Smart routing */}
                 <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg border border-slate-700">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-purple-400" />
@@ -435,7 +569,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 </div>
               </div>
 
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mt-5">
                 <p className="text-purple-300 text-sm">
                   🚀 Your QR code will be generated instantly. Print it on your insert cards and start collecting reviews!
                 </p>
@@ -477,6 +611,171 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
           )}
         </div>
       </form>
+
+      {/* New Product Modal */}
+      {showNewProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-white font-semibold text-lg mb-4">Add New Product</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Product Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Yoga Mat Premium"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Platform</label>
+                  <select
+                    value={newProduct.platform}
+                    onChange={(e) => setNewProduct({ ...newProduct, platform: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                  >
+                    <option value="amazon">Amazon</option>
+                    <option value="shopify">Shopify</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Marketplace</label>
+                  <input
+                    type="text"
+                    placeholder="US, UK, DE, etc."
+                    value={newProduct.marketplace}
+                    onChange={(e) => setNewProduct({ ...newProduct, marketplace: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">ASIN / Product ID (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. B00XXXXXX"
+                  value={newProduct.asin}
+                  onChange={(e) => setNewProduct({ ...newProduct, asin: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Image URL (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="https://example.com/image.jpg"
+                  value={newProduct.image_url}
+                  onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowNewProductModal(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingProduct || !newProduct.name}
+                onClick={handleCreateProduct}
+                className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+              >
+                {savingProduct && <Loader2 className="w-3 h-3 animate-spin" />}
+                Save Product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Promotion Modal */}
+      {showNewPromoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-white font-semibold text-lg mb-4">Add New Promotion</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Promotion Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 20% Off Coupon"
+                  value={newPromo.name}
+                  onChange={(e) => setNewPromo({ ...newPromo, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Type</label>
+                <select
+                  value={newPromo.type}
+                  onChange={(e) => setNewPromo({ ...newPromo, type: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                >
+                  <option value="coupon_code">Coupon Code</option>
+                  <option value="digital_download">Digital Download</option>
+                </select>
+              </div>
+              {newPromo.type === 'coupon_code' ? (
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Coupon Code *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SUMMER20"
+                    value={newPromo.coupon_code}
+                    onChange={(e) => setNewPromo({ ...newPromo, coupon_code: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Download URL *</label>
+                  <input
+                    type="text"
+                    placeholder="https://example.com/ebook.pdf"
+                    value={newPromo.download_url}
+                    onChange={(e) => setNewPromo({ ...newPromo, download_url: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Delivery Message (Optional)</label>
+                <textarea
+                  placeholder="e.g. Here is your code! Thank you for the support."
+                  value={newPromo.delivery_message}
+                  onChange={(e) => setNewPromo({ ...newPromo, delivery_message: e.target.value })}
+                  className="w-full h-20 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowNewPromoModal(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingPromo || !newPromo.name || (newPromo.type === 'coupon_code' ? !newPromo.coupon_code : !newPromo.download_url)}
+                onClick={handleCreatePromo}
+                className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+              >
+                {savingPromo && <Loader2 className="w-3 h-3 animate-spin" />}
+                Save Promotion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

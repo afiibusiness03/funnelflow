@@ -33,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     logo_url: string | null
     plan_status: string
     trial_ends_at: string | null
+    brand_color: string | null
   }
 
   // ── Trial / plan access check ──────────────────────────────────
@@ -63,9 +64,34 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Show warning banner when ≤ 5 days left on trial
   const showTrialBanner = isTrialing && daysLeft !== null && daysLeft > 0 && daysLeft <= 5
 
+  const brandColor = tenant.brand_color ?? '#f97316' // default to orange
+
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '249, 115, 22'
+  }
+
+  const darkenColor = (hex: string, percent: number): string => {
+    let num = parseInt(hex.replace("#",""), 16),
+      amt = Math.round(2.55 * percent),
+      R = (num >> 16) - amt,
+      G = (num >> 8 & 0x00FF) - amt,
+      B = (num & 0x0000FF) - amt;
+    return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+  }
+
+  const brandColorDark = darkenColor(brandColor, 10)
+  const brandColorRgb = hexToRgb(brandColor)
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
+    <div 
+      className="flex h-screen bg-slate-950 overflow-hidden"
+      style={{
+        '--brand-color': brandColor,
+        '--brand-color-dark': brandColorDark,
+        '--brand-color-rgb': brandColorRgb,
+      } as React.CSSProperties}
+    >
       <Sidebar
         tenantName={tenant.name}
         tenantLogo={tenant.logo_url}

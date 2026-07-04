@@ -10,10 +10,12 @@ interface StepCompleteProps {
   couponCode?:        string | null
   customerEmail:      string
   tenantName:         string
+  feedbackText?:      string | null
+  reviewUrl?:         string | null
 }
 
 export default function StepComplete({
-  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName,
+  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName, feedbackText, reviewUrl,
 }: StepCompleteProps) {
   const [copied, setCopied] = useState(false)
 
@@ -40,8 +42,8 @@ export default function StepComplete({
     let rafId: number
 
     const animate = () => {
-      if (frame > 120) return          // just stop — cleanup handles removal
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      let active = false
       particles.forEach((p) => {
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
@@ -49,15 +51,30 @@ export default function StepComplete({
         ctx.fill()
         p.y += p.d
         p.x += Math.sin(frame * 0.05 + p.tilt) * 1.5
+        if (p.y < canvas.height) {
+          active = true
+        }
       })
       frame++
-      rafId = requestAnimationFrame(animate)
+      if (active) {
+        rafId = requestAnimationFrame(animate)
+      } else {
+        if (document.body.contains(canvas)) {
+          try {
+            document.body.removeChild(canvas)
+          } catch (_) {}
+        }
+      }
     }
     rafId = requestAnimationFrame(animate)
 
     return () => {
       cancelAnimationFrame(rafId)
-      if (document.body.contains(canvas)) document.body.removeChild(canvas)
+      if (document.body.contains(canvas)) {
+        try {
+          document.body.removeChild(canvas)
+        } catch (_) {}
+      }
     }
   }, [brandColor])
 
@@ -92,6 +109,23 @@ export default function StepComplete({
           >
             {copied ? '✓ Copied!' : '📋 Copy code'}
           </button>
+        </div>
+      )}
+
+      {reviewUrl && feedbackText && (
+        <div className="mb-6 mt-2">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(feedbackText)
+              window.open(reviewUrl, '_blank')
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-purple-500/20"
+          >
+            📋 Copy Review & Continue
+          </button>
+          <p className="text-xs text-slate-400 mt-2">
+            Clicking this will copy your feedback to your clipboard and open Amazon so you can paste it.
+          </p>
         </div>
       )}
 

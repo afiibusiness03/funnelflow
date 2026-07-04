@@ -61,7 +61,7 @@ export default function SettingsPage() {
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand_color: '#6366f1' },
+    defaultValues: { brand_color: '#f97316' },
   })
 
   const brandColor = watch('brand_color')
@@ -85,7 +85,7 @@ export default function SettingsPage() {
       const tenant = userData.tenant as any
       reset({
         name:          tenant?.name ?? '',
-        brand_color:   tenant?.brand_color ?? '#6366f1',
+        brand_color:   tenant?.brand_color ?? '#f97316',
         custom_domain: tenant?.custom_domain ?? '',
       })
 
