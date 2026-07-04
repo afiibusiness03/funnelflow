@@ -121,12 +121,7 @@ export default function FunnelPage() {
       couponCode: json.coupon_code ?? json.data?.coupon_code ?? null,
     })
 
-    // Smart routing decision
-    if (shouldAskReview && campaign.review_url) {
-      setStep(3)
-    } else {
-      setStep(4)
-    }
+    setStep(4)
   }, [campaign, customer])
 
   // Step 3 complete
@@ -152,7 +147,11 @@ export default function FunnelPage() {
     </div>
   )
 
-  const totalSteps = (campaign.smart_routing && campaign.review_url) ? 4 : 3
+  const displayStep = campaign.require_order_verify
+    ? (step === 1 ? 1 : step === 2 ? 2 : 3)
+    : (step === 2 ? 1 : 2)
+
+  const totalSteps = campaign.require_order_verify ? 3 : 2
 
   return (
     <div
@@ -164,11 +163,11 @@ export default function FunnelPage() {
     >
       <FunnelLayout
         brandColor={brandColor}
-      logoUrl={logoUrl}
-      tenantName={tenantName}
-      step={step < 4 ? step : undefined}
-      totalSteps={totalSteps}
-    >
+        logoUrl={logoUrl}
+        tenantName={tenantName}
+        step={step < 4 ? displayStep : undefined}
+        totalSteps={totalSteps}
+      >
       {step === 1 && (
         <StepOrderVerify
           campaignId={campaign.id}
