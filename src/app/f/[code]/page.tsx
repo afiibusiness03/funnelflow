@@ -208,6 +208,13 @@ export default function FunnelPage() {
           tenantName={tenantName}
           feedbackText={feedbackData?.feedbackText ?? null}
           reviewUrl={campaign.review_url ?? null}
+          showReviewRedirect={
+            campaign.review_url
+              ? (campaign.smart_routing
+                  ? (feedbackData?.rating ?? 0) >= campaign.smart_routing_threshold
+                  : true)
+              : false
+          }
         />
       )}
     </FunnelLayout>

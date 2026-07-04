@@ -12,10 +12,11 @@ interface StepCompleteProps {
   tenantName:         string
   feedbackText?:      string | null
   reviewUrl?:         string | null
+  showReviewRedirect?: boolean
 }
 
 export default function StepComplete({
-  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName, feedbackText, reviewUrl,
+  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName, feedbackText, reviewUrl, showReviewRedirect = false,
 }: StepCompleteProps) {
   const [copied, setCopied] = useState(false)
 
@@ -112,7 +113,7 @@ export default function StepComplete({
         </div>
       )}
 
-      {reviewUrl && feedbackText && (
+      {showReviewRedirect && reviewUrl && feedbackText && (
         <div className="mb-6 mt-2">
           <button
             onClick={() => {
