@@ -39,51 +39,50 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
   const rate = conversionRate(campaign.total_completions, campaign.total_scans)
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600 transition-all group">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <QrCode className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-white font-medium text-sm truncate">{campaign.name}</h3>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLES[campaign.status] ?? STATUS_STYLES.draft)}>
-                {campaign.status}
-              </span>
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600 transition-all group flex flex-col justify-between h-full">
+      <Link href={`/dashboard/campaigns/${campaign.id}`} className="block space-y-4 cursor-pointer flex-1">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/30 transition">
+              <QrCode className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-white font-medium text-sm truncate group-hover:text-purple-400 transition">{campaign.name}</h3>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLES[campaign.status] ?? STATUS_STYLES.draft)}>
+                  {campaign.status}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        <button className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white transition p-1">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      </div>
 
-      {/* Product */}
-      {campaign.product && (
-        <div className="flex items-center gap-2 mb-4 text-slate-500 text-xs">
-          <Package className="w-3 h-3" />
-          <span className="truncate">{campaign.product.name}</span>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {[
-          { label: 'Scans',       value: campaign.total_scans.toLocaleString() },
-          { label: 'Completions', value: campaign.total_completions.toLocaleString() },
-          { label: 'Conv. Rate',  value: `${rate}%` },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-slate-900 rounded-lg p-2 text-center">
-            <p className="text-white text-sm font-bold">{stat.value}</p>
-            <p className="text-slate-500 text-xs">{stat.label}</p>
+        {/* Product */}
+        {campaign.product && (
+          <div className="flex items-center gap-2 text-slate-500 text-xs">
+            <Package className="w-3 h-3" />
+            <span className="truncate">{campaign.product.name}</span>
           </div>
-        ))}
-      </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Scans',       value: campaign.total_scans.toLocaleString() },
+            { label: 'Completions', value: campaign.total_completions.toLocaleString() },
+            { label: 'Conv. Rate',  value: `${rate}%` },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-slate-900 rounded-lg p-2 text-center">
+              <p className="text-white text-sm font-bold">{stat.value}</p>
+              <p className="text-slate-500 text-xs">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </Link>
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-700">
+      <div className="flex items-center justify-between pt-3 border-t border-slate-700 mt-4">
         <span className="text-slate-500 text-xs">{formatDate(campaign.created_at)}</span>
         <div className="flex items-center gap-1">
           <Link
