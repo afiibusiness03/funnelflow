@@ -47,6 +47,12 @@ export async function checkFraud({
   ipAddress,
 }: FraudCheckInput): Promise<FraudResult> {
 
+  // 0. Bypass fraud checks for administrator testing accounts
+  const ADMIN_EMAILS = ['omaromran2091@gmail.com', 'afiibusiness03@gmail.com', 'omaromran9120@gmail.com']
+  if (ADMIN_EMAILS.includes(customerEmail.toLowerCase())) {
+    return { isFlagged: false }
+  }
+
   // 0. Disposable / throwaway email — fastest check, no DB needed
   if (isDisposableEmail(customerEmail)) {
     return { isFlagged: true, reason: 'disposable_email' }
