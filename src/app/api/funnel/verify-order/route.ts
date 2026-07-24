@@ -13,9 +13,37 @@ function validateOrderIdFormat(orderId: string, platform: string): boolean {
   }
 }
 
+// Simple in-memory rate limiting to prevent brute-forcing order verification
+interface RateLimitEntry {
+  count: number
+  resetTime: number
+}
+const rateLimitCache = new Map<string, RateLimitEntry>()
+
+function isRateLimited(ip: string, limit = 10, windowMs = 60000): boolean {
+  const now = Date.now()
+  if (Math.random() < 0.01) {
+    for (const [key, val] of rateLimitCache.entries()) {
+      if (now > val.resetTime) rateLimitCache.delete(key)
+    }
+  }
+  const entry = rateLimitCache.get(ip)
+  if (!entry || now > entry.resetTime) {
+    rateLimitCache.set(ip, { count: 1, resetTime: now + windowMs })
+    return false
+  }
+  entry.count++
+  return entry.count > limit
+}
+
 // Verify order ID exists for a given platform
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '127.0.0.1'
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ error: 'Too many verification attempts. Please try again in a minute.' }, { status: 429 })
+    }
+
     const { orderId, platform, campaignId } = await request.json()
 
     if (!orderId || !campaignId) {

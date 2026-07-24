@@ -7,6 +7,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: userData } = await supabase
+    .from('users').select('tenant_id').eq('id', user.id).single()
+  if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
   const service = createServiceClient()
 
   // Load submission with promotion + tenant
@@ -17,6 +21,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .single()
 
   if (!submission) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (submission.tenant_id !== userData.tenant_id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   if (submission.claim_status === 'delivered') {
     return NextResponse.json({ error: 'Already delivered' }, { status: 400 })
   }

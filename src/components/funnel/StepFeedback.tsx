@@ -76,14 +76,17 @@ export default function StepFeedback({ campaignId, brandColor, onComplete }: Ste
       {/* Feedback text — show if rated 3 or below */}
       {rating > 0 && rating <= 3 && (
         <div className="mb-5">
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">
-            Tell us more <span className="text-slate-400 font-normal">(optional)</span>
+          <label className="block text-sm font-medium text-slate-600 mb-1.5 flex justify-between items-center">
+            <span>Tell us more <span className="text-red-500">*</span></span>
+            {feedbackText.trim().length < 10 && (
+              <span className="text-xs text-orange-500">Min. {10 - feedbackText.trim().length} more chars</span>
+            )}
           </label>
           <textarea
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
             rows={3}
-            placeholder="What could we improve?"
+            placeholder="Please tell us what we could improve..."
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition text-sm resize-none"
           />
         </div>
@@ -92,14 +95,17 @@ export default function StepFeedback({ campaignId, brandColor, onComplete }: Ste
       {/* Optional praise — show if rated 4 or 5 */}
       {rating >= 4 && (
         <div className="mb-5">
-          <label className="block text-sm font-medium text-slate-600 mb-1.5">
-            What did you love? <span className="text-slate-400 font-normal">(optional)</span>
+          <label className="block text-sm font-medium text-slate-600 mb-1.5 flex justify-between items-center">
+            <span>What did you love? <span className="text-red-500">*</span></span>
+            {feedbackText.trim().length < 10 && (
+              <span className="text-xs text-orange-500">Min. {10 - feedbackText.trim().length} more chars</span>
+            )}
           </label>
           <textarea
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
             rows={2}
-            placeholder="Great quality, fast shipping…"
+            placeholder="Great quality, fast shipping, amazing experience..."
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition text-sm resize-none"
           />
         </div>
@@ -107,7 +113,7 @@ export default function StepFeedback({ campaignId, brandColor, onComplete }: Ste
 
       <button
         onClick={handleSubmit}
-        disabled={!rating || submitting}
+        disabled={!rating || submitting || feedbackText.trim().length < 10}
         className="w-full py-3 rounded-xl text-white font-semibold text-sm transition disabled:opacity-40"
         style={{ backgroundColor: brandColor }}
       >

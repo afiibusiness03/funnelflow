@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateSlug } from '@/lib/utils/helpers'
 
 export async function POST(request: Request) {
@@ -8,6 +8,12 @@ export async function POST(request: Request) {
 
     if (!name || !userId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const clientSupabase = await createClient()
+    const { data: { user } } = await clientSupabase.auth.getUser()
+    if (!user || user.id !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabase = createServiceClient()
