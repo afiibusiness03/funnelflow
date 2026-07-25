@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { 
-  QrCode, ArrowRight, Zap, Check, Shield, Star, 
-  RefreshCw, BarChart3, Inbox, Smartphone, Lock 
+  QrCode, ArrowRight, Zap, Check, Star, 
+  Smartphone, Lock 
 } from 'lucide-react'
 
 // Default fallback site settings if DB table isn't created or seeded yet
@@ -58,42 +58,41 @@ export default async function MarketingLandingPage() {
       }
     }
   } catch (err) {
-    // Fail open safely using DEFAULTS
     console.error('Could not load site settings from DB:', err)
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white selection:bg-purple-600 selection:text-white flex flex-col justify-between">
+    <div className="landing-page-root min-h-screen bg-slate-950 text-white selection:bg-[#6366f1] selection:text-white flex flex-col justify-between">
       
       {/* ─── HEADER ─────────────────────────────────────────────────── */}
-      <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-[#6366f1] rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/30">
               <QrCode className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-bold text-lg">FunnelFlow</span>
+            <span className="text-white font-extrabold text-xl tracking-tight">AmazinReview</span>
           </Link>
 
           <div className="flex items-center gap-4">
-            <Link href="/pricing" className="text-slate-400 hover:text-white text-sm font-medium transition">
+            <Link href="/pricing" className="text-slate-300 hover:text-white text-sm font-medium transition">
               Pricing
             </Link>
             {user ? (
               <Link 
                 href="/dashboard" 
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
+                className="bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-indigo-500/20"
               >
                 Go to Dashboard
               </Link>
             ) : (
               <>
-                <Link href="/login" className="text-slate-400 hover:text-white text-sm font-medium transition">
+                <Link href="/login" className="text-slate-300 hover:text-white text-sm font-medium transition">
                   Login
                 </Link>
                 <Link 
                   href="/register" 
-                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
+                  className="bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-indigo-500/20"
                 >
                   Start Free Trial
                 </Link>
@@ -105,32 +104,42 @@ export default async function MarketingLandingPage() {
 
       {/* ─── HERO SECTION ────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-20 px-6 max-w-6xl mx-auto w-full">
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+        {/* Ambient Glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#6366f1]/15 blur-[140px] rounded-full pointer-events-none" />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
           <div className="lg:col-span-7 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded-full">
-              <Zap className="w-3.5 h-3.5" />
-              Maximize Amazon & Shopify reviews
+            <div className="inline-flex items-center gap-2 bg-[#6366f1]/15 border border-[#6366f1]/30 text-indigo-300 text-xs font-semibold px-3.5 py-1.5 rounded-full">
+              <Zap className="w-3.5 h-3.5 text-[#6366f1]" />
+              <span>Maximize Amazon & Shopify reviews</span>
             </div>
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-white via-slate-100 to-purple-400 bg-clip-text text-transparent">
-              {settings.hero_title}
+            
+            {/* Crystal clear high-contrast hero title */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] text-white">
+              {settings.hero_title.includes('Package') ? (
+                <>
+                  Turn Every <span className="text-[#818cf8] underline decoration-[#6366f1]/50 underline-offset-8">Package</span> Into a Review Machine 🎁
+                </>
+              ) : (
+                settings.hero_title
+              )}
             </h1>
-            <p className="text-slate-400 text-lg md:text-xl leading-relaxed">
+
+            <p className="text-slate-300 text-lg md:text-xl leading-relaxed max-w-xl font-normal">
               {settings.hero_subtitle}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <Link 
                 href="/register" 
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3.5 rounded-xl transition flex items-center justify-center gap-2 text-base shadow-lg shadow-purple-500/20"
+                className="bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold px-7 py-4 rounded-xl transition flex items-center justify-center gap-2.5 text-base shadow-xl shadow-indigo-500/30"
               >
                 Start Your 14-Day Free Trial
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link 
                 href="/pricing" 
-                className="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold px-6 py-3.5 rounded-xl transition flex items-center justify-center text-base"
+                className="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold px-6 py-4 rounded-xl transition flex items-center justify-center text-base"
               >
                 View Plans
               </Link>
@@ -139,55 +148,55 @@ export default async function MarketingLandingPage() {
 
           {/* Interactive Mockup Preview */}
           <div className="lg:col-span-5">
-            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-slate-950/60 rounded-2xl border border-slate-900">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Smartphone className="w-5 h-5 text-purple-400" />
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
+              <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-2xl border border-slate-800/80">
+                <div className="w-10 h-10 bg-[#6366f1]/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-5 h-5 text-[#818cf8]" />
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xxs font-semibold uppercase">Customer Funnel Preview</p>
+                  <p className="text-slate-400 text-xxs font-bold uppercase tracking-wider">Customer Funnel Preview</p>
                   <p className="text-white text-xs font-bold">Post-Purchase Claim Flow</p>
                 </div>
               </div>
 
               {/* Mock Screen 1: Order verify */}
-              <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
                   <span>Step 1: Order Verification</span>
-                  <Check className="w-3.5 h-3.5 text-green-400" />
+                  <Check className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div className="h-9 bg-slate-900 border border-slate-800 rounded-xl px-3 flex items-center justify-between">
-                  <span className="text-slate-300 text-xs font-mono">114-4820593-9481948</span>
-                  <span className="text-xxs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold">Verified by API</span>
+                <div className="h-10 bg-slate-900 border border-slate-800 rounded-xl px-3 flex items-center justify-between">
+                  <span className="text-white text-xs font-mono font-medium">114-4820593-9481948</span>
+                  <span className="text-xxs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">Verified by API</span>
                 </div>
               </div>
 
               {/* Mock Screen 2: Feedback & Routing */}
-              <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
                   <span>Step 2: Rating & Routing</span>
-                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+                  <Star className="w-4 h-4 text-amber-400 fill-current" />
                 </div>
                 <div className="flex gap-2 justify-center py-1">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star 
                       key={s} 
-                      className={`w-6 h-6 ${s === 5 ? 'text-yellow-400 fill-current scale-110' : 'text-slate-700'}`} 
+                      className={`w-6 h-6 ${s === 5 ? 'text-amber-400 fill-current scale-110' : 'text-slate-700 fill-current'}`} 
                     />
                   ))}
                 </div>
-                <div className="text-center text-xxs text-purple-400 font-bold bg-purple-500/10 py-1.5 rounded-lg border border-purple-500/20">
+                <div className="text-center text-xs text-indigo-300 font-bold bg-[#6366f1]/20 py-2 px-3 rounded-xl border border-[#6366f1]/40 flex items-center justify-center gap-1.5">
                   🚀 Directed to Amazon Product Review Link
                 </div>
               </div>
 
               {/* Mock Screen 3: Reward delivery */}
-              <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
                   <span>Step 3: Instant Coupon Delivery</span>
-                  <Lock className="w-3.5 h-3.5 text-purple-400" />
+                  <Lock className="w-4 h-4 text-[#818cf8]" />
                 </div>
-                <div className="h-10 bg-slate-900 rounded-xl flex items-center justify-center font-bold text-sm tracking-widest text-purple-300 border border-dashed border-purple-500/40">
+                <div className="h-10 bg-slate-900 rounded-xl flex items-center justify-center font-bold text-sm tracking-widest text-[#a5b4fc] border border-dashed border-[#6366f1]/50">
                   SAVE25PCT
                 </div>
               </div>
@@ -200,7 +209,7 @@ export default async function MarketingLandingPage() {
       <section className="bg-slate-900/30 border-y border-slate-900 py-20 px-6">
         <div className="max-w-6xl mx-auto text-center space-y-12">
           <div className="space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">How FunnelFlow Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">How AmazinReview Works</h2>
             <p className="text-slate-400 text-lg max-w-xl mx-auto">
               Automate customer post-purchase engagement in 4 simple steps.
             </p>
@@ -274,23 +283,23 @@ export default async function MarketingLandingPage() {
 
       {/* ─── FINAL CTA ────────────────────────────────────────────────── */}
       <section className="py-20 px-6 max-w-4xl mx-auto w-full text-center relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/5 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#6366f1]/10 blur-[80px] rounded-full pointer-events-none" />
         
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-8 md:p-12 space-y-6 relative z-10">
           <h3 className="text-2xl md:text-4xl font-bold text-white">Ready to automate your review funnel?</h3>
           <p className="text-slate-400 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
-            Join growing brands utilizing FunnelFlow to collect product feedback and secure higher margins.
+            Join growing brands utilizing AmazinReview to collect product feedback and secure higher margins.
           </p>
           <div className="flex justify-center gap-4">
             <Link 
               href="/register" 
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg transition"
+              className="bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold px-6 py-3.5 rounded-xl transition shadow-lg shadow-indigo-500/25"
             >
               Start Free Trial
             </Link>
             <Link 
               href="/pricing" 
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-3 rounded-lg transition"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold px-6 py-3.5 rounded-xl transition"
             >
               Learn More
             </Link>
@@ -301,7 +310,7 @@ export default async function MarketingLandingPage() {
       {/* ─── FOOTER ──────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-900 bg-slate-950 py-8 px-6 text-center">
         <p className="text-slate-500 text-xs">
-          &copy; {new Date().getFullYear()} FunnelFlow. All rights reserved.
+          &copy; {new Date().getFullYear()} AmazinReview. All rights reserved.
         </p>
       </footer>
 

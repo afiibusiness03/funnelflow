@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Pricing — FunnelFlow',
+  title: 'Pricing — AmazinReview',
   description: "Simple, transparent pricing. Start free, upgrade when you're ready.",
 }
 

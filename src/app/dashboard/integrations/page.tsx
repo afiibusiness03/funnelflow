@@ -132,7 +132,7 @@ export default function IntegrationsPage() {
         <div>
           <p className="text-blue-300 text-sm font-medium">About integrations</p>
           <p className="text-blue-400/80 text-xs mt-0.5">
-            Connecting a platform allows FunnelFlow to verify customer order IDs automatically.
+            Connecting a platform allows AmazinReview to verify customer order IDs automatically.
             Without a connection, order verification still works — customers just need a valid order ID format.
           </p>
         </div>

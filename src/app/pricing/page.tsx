@@ -123,7 +123,7 @@ export default function PricingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-between">
+    <div className="landing-page-root min-h-screen bg-slate-950 flex flex-col justify-between">
       <div>
         {/* Dynamic Expiration Banner */}
         {isExpired && (
@@ -143,7 +143,7 @@ export default function PricingPage() {
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
               <QrCode className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-bold text-lg">FunnelFlow</span>
+            <span className="text-white font-bold text-lg">AmazinReview</span>
           </NextLink>
 
           <div>
@@ -305,7 +305,7 @@ export default function PricingPage() {
       {/* Contact Footer */}
       <footer className="w-full border-t border-slate-900 py-6 text-center text-slate-500 text-sm">
         Need a custom plan?{' '}
-        <a href="mailto:support@funnelflow.io" className="text-purple-400 hover:underline">
+        <a href="mailto:support@amazinreview.com" className="text-purple-400 hover:underline">
           Contact us
         </a>
       </footer>

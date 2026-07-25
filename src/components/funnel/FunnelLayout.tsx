@@ -46,8 +46,8 @@ export default function FunnelLayout({
         {/* Footer */}
         <p className="text-center text-slate-400 text-xs mt-6">
           Powered by{' '}
-          <a href="https://funnelflow.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600">
-            FunnelFlow
+          <a href="https://amazinreview.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600">
+            AmazinReview
           </a>
         </p>
       </div>

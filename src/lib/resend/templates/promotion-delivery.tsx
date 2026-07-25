@@ -76,7 +76,7 @@ export default function PromotionDeliveryEmail({
 
           {/* Footer */}
           <Text style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginTop: '24px' }}>
-            Powered by FunnelFlow · If you didn&apos;t make this purchase, please ignore this email.
+            Powered by AmazinReview · If you didn&apos;t make this purchase, please ignore this email.
           </Text>
         </Container>
       </Body>

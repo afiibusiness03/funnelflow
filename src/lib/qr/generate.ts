@@ -5,7 +5,7 @@ interface QROptions {
   color?: string   // brand color hex
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://funnelflow.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://amazinreview.com'
 
 // Generate QR as SVG string (for storing / displaying)
 export async function generateQRSvg({ shortCode, color = '#000000' }: QROptions): Promise<string> {

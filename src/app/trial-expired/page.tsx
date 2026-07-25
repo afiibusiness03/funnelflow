@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Clock, ShieldCheck, ArrowRight, QrCode, LogOut } from 'lucide-react'
 
 export const metadata = {
-  title: 'Trial Expired — FunnelFlow',
+  title: 'Trial Expired — AmazinReview',
 }
 
 const FEATURES = [
@@ -50,7 +50,7 @@ export default async function TrialExpiredPage() {
           <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
             <QrCode className="w-5 h-5 text-white" />
           </div>
-          <span className="text-white font-bold text-lg">FunnelFlow</span>
+          <span className="text-white font-bold text-lg">AmazinReview</span>
         </div>
         <form action="/api/auth/signout" method="POST">
           <button
@@ -96,7 +96,7 @@ export default async function TrialExpiredPage() {
 
           <p className="text-slate-500 text-sm mb-10">
             Have questions?{' '}
-            <a href="mailto:support@funnelflow.io" className="text-purple-400 hover:underline">
+            <a href="mailto:support@amazinreview.com" className="text-purple-400 hover:underline">
               Contact support
             </a>
           </p>

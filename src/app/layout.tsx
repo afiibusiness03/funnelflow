@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title:       'FunnelFlow — Review & Engagement Platform',
+  title:       'AmazinReview — Review & Engagement Platform',
   description: 'Turn every package into a review machine. QR-powered post-purchase funnels for Amazon, Shopify & more.',
 }
 

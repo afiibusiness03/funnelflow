@@ -272,7 +272,7 @@ export default function SettingsPage() {
               />
             </div>
             <p className="text-slate-500 text-xs mt-1.5">
-              Point a CNAME record to <code className="text-purple-400">cname.funnelflow.com</code> then enter your domain here.
+              Point a CNAME record to <code className="text-purple-400">cname.amazinreview.com</code> then enter your domain here.
             </p>
           </div>
 

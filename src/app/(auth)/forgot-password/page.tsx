@@ -39,17 +39,20 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="auth-page-root min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#6366f1]/15 blur-[140px] rounded-full pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+        <div className="flex items-center justify-center gap-2.5 mb-2">
+          <div className="w-10 h-10 bg-[#6366f1] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <QrCode className="w-6 h-6 text-white" />
           </div>
-          <span className="text-2xl font-bold text-white">FunnelFlow</span>
+          <span className="text-2xl font-extrabold text-white tracking-tight">AmazinReview</span>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
           {success ? (
             <div className="text-center py-4">
               <div className="w-14 h-14 bg-purple-500/30 rounded-full flex items-center justify-center mx-auto mb-4">

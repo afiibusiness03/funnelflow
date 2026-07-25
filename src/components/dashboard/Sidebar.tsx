@@ -80,7 +80,7 @@ export default function Sidebar({ tenantName, tenantLogo, userEmail, pendingClai
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="text-white font-semibold text-sm truncate leading-tight">FunnelFlow</p>
+            <p className="text-white font-semibold text-sm truncate leading-tight">AmazinReview</p>
             <p className="text-slate-400 text-xs truncate leading-tight">{tenantName}</p>
           </div>
         )}

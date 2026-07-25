@@ -38,7 +38,7 @@ export default function BillingSuccessPage() {
           Payment Successful! 🎉
         </h1>
         <p className="text-slate-400 mb-8">
-          Your account has been upgraded. Welcome to FunnelFlow!
+          Your account has been upgraded. Welcome to AmazinReview!
         </p>
 
         {/* Loading indicator */}

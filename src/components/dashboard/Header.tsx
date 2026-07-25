@@ -23,7 +23,7 @@ function getPageMeta(pathname: string) {
   const match = Object.keys(PAGE_TITLES)
     .filter((k) => pathname.startsWith(k) && k !== '/dashboard')
     .sort((a, b) => b.length - a.length)[0]
-  return PAGE_TITLES[match] ?? { title: 'FunnelFlow', description: '' }
+  return PAGE_TITLES[match] ?? { title: 'AmazinReview', description: '' }
 }
 
 interface HeaderProps {

@@ -1,5 +1,5 @@
 // ============================================================
-// FunnelFlow — TypeScript Types (matches Supabase schema)
+// AmazinReview — TypeScript Types (matches Supabase schema)
 // ============================================================
 
 export type Plan = 'starter' | 'growth' | 'pro' | 'agency'
