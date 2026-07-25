@@ -178,7 +178,11 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
     },
   })
 
-  const selectedProductId   = watch('product_id')
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(() => {
+    return products && products.length > 0 ? [products[0].id] : []
+  })
+
+  const selectedProductId   = watch('product_id') || selectedProductIds[0]
   const selectedPromotionId = watch('promotion_id')
   const smartRouting        = watch('smart_routing')
   const threshold           = watch('smart_routing_threshold')
@@ -186,10 +190,28 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const selectedProduct   = localProducts.find(p => p.id === selectedProductId)
   const selectedPromotion = localPromotions.find(p => p.id === selectedPromotionId)
 
+  const toggleProductSelect = (id: string) => {
+    if (selectedProductIds.includes(id)) {
+      if (selectedProductIds.length > 1) {
+        const next = selectedProductIds.filter(pid => pid !== id)
+        setSelectedProductIds(next)
+        setValue('product_id', next[0])
+      }
+    } else {
+      const next = [...selectedProductIds, id]
+      setSelectedProductIds(next)
+      setValue('product_id', next[0])
+    }
+  }
+
   const nextStep = async () => {
     let fields: (keyof FormData)[] = []
-    if (step === 1) fields = ['name', 'product_id']
+    if (step === 1) fields = ['name']
     const valid = await trigger(fields)
+    if (selectedProductIds.length === 0) {
+      alert('Please select at least one product')
+      return
+    }
     if (valid) setStep(s => Math.min(s + 1, 4))
   }
 
@@ -197,10 +219,16 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
     setServerError(null)
     setIsSubmitting(true)
     try {
+      const payload = {
+        ...data,
+        product_id: selectedProductIds[0] || data.product_id,
+        product_ids: selectedProductIds,
+      }
+
       const res = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
       if (!res.ok) { setServerError(json.error ?? 'Something went wrong'); return }
@@ -257,7 +285,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
             <div className="space-y-5">
               <div>
                 <h2 className="text-white font-semibold text-lg mb-1">Name your campaign</h2>
-                <p className="text-slate-400 text-sm">Choose a product and give this campaign a name.</p>
+                <p className="text-slate-400 text-sm">Choose one or more products and give this campaign a name.</p>
               </div>
 
               <div>
@@ -277,9 +305,12 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-slate-300">
-                    Select Product <span className="text-red-400">*</span>
-                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300">
+                      Select Product(s) <span className="text-red-400">*</span>
+                    </label>
+                    <p className="text-slate-400 text-xs">You can select multiple products for this campaign</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setShowNewProductModal(true)}
@@ -302,40 +333,44 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {localProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => setValue('product_id', product.id)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition',
-                          selectedProductId === product.id
-                            ? 'border-purple-500 bg-purple-500/10'
-                            : 'border-slate-700 bg-slate-900 hover:border-slate-600'
-                        )}
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {product.image_url
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                            : <Package className="w-4 h-4 text-slate-400" />
-                          }
+                    {localProducts.map((product) => {
+                      const isSelected = selectedProductIds.includes(product.id)
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => toggleProductSelect(product.id)}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition cursor-pointer',
+                            isSelected
+                              ? 'border-purple-500 bg-purple-500/10'
+                              : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                          />
+                          <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {product.image_url
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                              : <Package className="w-4 h-4 text-slate-400" />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-sm font-medium truncate', isSelected ? 'text-white' : 'text-slate-300')}>
+                              {product.name}
+                            </p>
+                            <p className="text-slate-500 text-xs capitalize">
+                              {product.platform} · {product.marketplace}
+                              {product.asin ? ` · ${product.asin}` : ''}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('text-sm font-medium truncate', selectedProductId === product.id ? 'text-white' : 'text-slate-300')}>
-                            {product.name}
-                          </p>
-                          <p className="text-slate-500 text-xs capitalize">
-                            {product.platform} · {product.marketplace}
-                            {product.asin ? ` · ${product.asin}` : ''}
-                          </p>
-                        </div>
-                        <div className={cn(
-                          'w-4 h-4 rounded-full border-2 flex-shrink-0',
-                          selectedProductId === product.id ? 'border-purple-500 bg-purple-500' : 'border-slate-600'
-                        )} />
-                      </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
                 {errors.product_id && <p className="text-red-400 text-xs mt-1">{errors.product_id.message}</p>}
