@@ -80,35 +80,20 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const handleCreateProduct = async () => {
     if (!newProduct.name) return
     setSavingProduct(true)
-    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single()
-      if (!userData?.tenant_id) return
-
-      const { data, error } = await supabase
-        .from('products')
-        .insert({
-          tenant_id: userData.tenant_id,
-          name: newProduct.name,
-          platform: newProduct.platform,
-          marketplace: newProduct.marketplace,
-          asin: newProduct.asin || null,
-          image_url: newProduct.image_url || null,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        alert(error.message)
-      } else if (data) {
-        setLocalProducts(prev => [...prev, data as unknown as Product])
-        setValue('product_id', data.id)
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        alert(json.error ?? 'Failed to create product')
+      } else if (json.data) {
+        const createdProd = json.data as unknown as Product
+        setLocalProducts(prev => [...prev, createdProd])
+        setSelectedProductIds(prev => [...prev, createdProd.id])
+        setValue('product_id', createdProd.id)
         setShowNewProductModal(false)
         setNewProduct({ name: '', platform: 'amazon', marketplace: 'US', asin: '', image_url: '' })
       }
