@@ -25,5 +25,23 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
     return NextResponse.json({ error: 'Campaign not found or inactive' }, { status: 404 })
   }
 
-  return NextResponse.json({ data: campaign })
+  // Check if campaign has multi-products in campaign_products table
+  const { data: cpRows } = await supabase
+    .from('campaign_products')
+    .select('product:products(id, name, image_url, platform, marketplace)')
+    .eq('campaign_id', campaign.id)
+
+  let productsList = []
+  if (cpRows && cpRows.length > 0) {
+    productsList = cpRows.map((r: any) => r.product).filter(Boolean)
+  } else if (campaign.product) {
+    productsList = [campaign.product]
+  }
+
+  const campaignData = {
+    ...campaign,
+    products: productsList,
+  }
+
+  return NextResponse.json({ data: campaignData })
 }

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       campaignId, customerEmail, customerName,
       orderId, orderVerified, platform, marketplace,
       rating, feedbackText,
-      shippingAddress, promotionId,
+      shippingAddress, promotionId, selectedProductIds,
     } = body
 
     if (!campaignId || !customerEmail) {
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         feedback_text:    feedbackText   ?? null,
         shipping_address: shippingAddress ?? null,
         promotion_id:     promotionId    ?? campaign.promotion_id ?? null,
+        selected_product_ids: Array.isArray(selectedProductIds) ? selectedProductIds : [],
         review_requested: reviewRequested,
         ip_address:       ip             ?? null,
         user_agent:       userAgent      ?? null,

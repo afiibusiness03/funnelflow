@@ -84,15 +84,19 @@ interface StepOrderVerifyProps {
   brandColor:    string
   productName:   string
   productImage:  string | null
+  products?:     Array<{ id: string; name: string; image_url: string | null }>
   requireVerify: boolean
-  onComplete: (data: { email: string; name?: string; orderId: string; verified: boolean }) => void
+  onComplete: (data: { email: string; name?: string; orderId: string; verified: boolean; selectedProductIds?: string[] }) => void
 }
 
 export default function StepOrderVerify({
-  campaignId, platform, brandColor, productName, productImage, requireVerify, onComplete,
+  campaignId, platform, brandColor, productName, productImage, products, requireVerify, onComplete,
 }: StepOrderVerifyProps) {
   const [verifying,   setVerifying]   = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
+    products && products.length > 0 ? products.map((p) => p.id) : []
+  )
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(makeSchema(requireVerify)),
@@ -140,25 +144,70 @@ export default function StepOrderVerify({
       body:    JSON.stringify({ campaignId, eventType: 'step_1_complete', stepNumber: 1 }),
     })
 
-    onComplete({ email: data.email, name: data.name, orderId: data.orderId ?? '', verified: true })
+    onComplete({ email: data.email, name: data.name, orderId: data.orderId ?? '', verified: true, selectedProductIds })
   }
 
   return (
     <div>
-      {/* Product info */}
-      <div className="flex items-center gap-3 mb-6 p-3 bg-slate-50 rounded-xl">
-        <div className="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {productImage
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={productImage} alt={productName} className="w-full h-full object-cover" />
-            : <Package className="w-6 h-6 text-slate-400" />
-          }
+      {/* Product info / Multi-product Selection */}
+      {products && products.length > 1 ? (
+        <div className="mb-6 space-y-3">
+          <p className="text-slate-800 font-bold text-sm">Select the product(s) you purchased:</p>
+          <div className="space-y-2">
+            {products.map((prod) => {
+              const isSelected = selectedProductIds.includes(prod.id)
+              return (
+                <div
+                  key={prod.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      if (selectedProductIds.length > 1) {
+                        setSelectedProductIds(selectedProductIds.filter((id) => id !== prod.id))
+                      }
+                    } else {
+                      setSelectedProductIds([...selectedProductIds, prod.id])
+                    }
+                  }}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer',
+                    isSelected ? 'bg-indigo-50/70 border-indigo-500 shadow-sm' : 'bg-slate-50 border-slate-200'
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    readOnly
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {prod.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <span className="text-slate-800 font-semibold text-sm flex-1">{prod.name}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        <div>
-          <p className="text-slate-500 text-xs">You purchased</p>
-          <p className="text-slate-800 font-medium text-sm">{productName}</p>
+      ) : (
+        <div className="flex items-center gap-3 mb-6 p-3 bg-slate-50 rounded-xl">
+          <div className="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {productImage
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={productImage} alt={productName} className="w-full h-full object-cover" />
+              : <Package className="w-6 h-6 text-slate-400" />
+            }
+          </div>
+          <div>
+            <p className="text-slate-500 text-xs">You purchased</p>
+            <p className="text-slate-800 font-medium text-sm">{productName}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <h2 className="text-slate-800 font-bold text-xl mb-1">Get your reward 🎁</h2>
       <p className="text-slate-500 text-sm mb-6">

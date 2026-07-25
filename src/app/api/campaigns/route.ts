@@ -46,21 +46,23 @@ export async function POST(request: Request) {
 
   const body = await request.json()
   const {
-    name, product_id, promotion_id,
+    name, product_id, product_ids, promotion_id,
     require_order_verify, smart_routing, smart_routing_threshold,
     language, review_url, custom_thank_you_msg,
     custom_color, custom_logo_url,
   } = body
 
-  if (!name || !product_id) {
+  const primaryProductId = product_id || (Array.isArray(product_ids) && product_ids.length > 0 ? product_ids[0] : null)
+
+  if (!name || !primaryProductId) {
     return NextResponse.json({ error: 'name and product_id are required' }, { status: 400 })
   }
 
-  // Verify product_id belongs to user's tenant
+  // Verify primaryProductId belongs to user's tenant
   const { data: productCheck } = await supabase
     .from('products')
     .select('id')
-    .eq('id', product_id)
+    .eq('id', primaryProductId)
     .eq('tenant_id', userData.tenant_id)
     .single()
 
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
     .insert({
       tenant_id: userData.tenant_id,
       name,
-      product_id,
+      product_id: primaryProductId,
       promotion_id: promotion_id || null,
       status: 'active',
       require_order_verify: require_order_verify ?? true,
@@ -106,6 +108,15 @@ export async function POST(request: Request) {
 
   if (insertError || !campaign) {
     return NextResponse.json({ error: insertError?.message ?? 'Failed to create campaign' }, { status: 500 })
+  }
+
+  // 1b. Insert campaign_products entries if multi-products provided
+  const allProductIds = Array.isArray(product_ids) && product_ids.length > 0 ? product_ids : [primaryProductId]
+  const cpEntries = allProductIds.map((pid: string) => ({ campaign_id: campaign.id, product_id: pid }))
+  try {
+    await serviceClient.from('campaign_products').insert(cpEntries)
+  } catch (err) {
+    console.error('Failed to insert campaign_products:', err)
   }
 
   // 2. Generate QR SVG with brand color

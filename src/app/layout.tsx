@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title:       'AmazinReview — Review & Engagement Platform',
   description: 'Turn every package into a review machine. QR-powered post-purchase funnels for Amazon, Shopify & more.',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -12,11 +12,12 @@ interface StepCompleteProps {
   tenantName:         string
   feedbackText?:      string | null
   reviewUrl?:         string | null
+  reviewUrls?:        string[]
   showReviewRedirect?: boolean
 }
 
 export default function StepComplete({
-  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName, feedbackText, reviewUrl, showReviewRedirect = false,
+  brandColor, thankYouMessage, promotionDelivered, couponCode, customerEmail, tenantName, feedbackText, reviewUrl, reviewUrls, showReviewRedirect = false,
 }: StepCompleteProps) {
   const [copied, setCopied] = useState(false)
 
@@ -79,6 +80,19 @@ export default function StepComplete({
     }
   }, [brandColor])
 
+  const handleCopyAndRedirect = () => {
+    if (feedbackText) {
+      navigator.clipboard.writeText(feedbackText)
+    }
+    if (reviewUrls && reviewUrls.length > 0) {
+      reviewUrls.forEach((url) => {
+        if (url) window.open(url, '_blank')
+      })
+    } else if (reviewUrl) {
+      window.open(reviewUrl, '_blank')
+    }
+  }
+
   return (
     <div className="text-center py-4">
       <div
@@ -102,24 +116,23 @@ export default function StepComplete({
           </p>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(couponCode)
-              setCopied(true)
-              setTimeout(() => setCopied(false), 2000)
+              if (couponCode) {
+                navigator.clipboard.writeText(couponCode)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }
             }}
-            className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 mx-auto"
+            className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 mx-auto font-medium"
           >
             {copied ? '✓ Copied!' : '📋 Copy code'}
           </button>
         </div>
       )}
 
-      {showReviewRedirect && reviewUrl && feedbackText && (
+      {showReviewRedirect && (reviewUrl || (reviewUrls && reviewUrls.length > 0)) && feedbackText && (
         <div className="mb-6 mt-2">
           <button
-            onClick={() => {
-              navigator.clipboard.writeText(feedbackText)
-              window.open(reviewUrl, '_blank')
-            }}
+            onClick={handleCopyAndRedirect}
             className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg shadow-purple-500/20"
           >
             📋 Copy Review & Continue
