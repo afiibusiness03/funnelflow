@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -10,15 +10,38 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .from('users').select('tenant_id').eq('id', user.id).single()
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { data, error } = await supabase
+  const serviceClient = createServiceClient()
+  const { data: campaign, error } = await serviceClient
     .from('campaigns')
-    .select('*, product:products(*), promotion:promotions(*)')
+    .select('*, product:products(*), promotion:promotions(*), tenant:tenants(brand_color)')
     .eq('id', params.id)
     .eq('tenant_id', userData.tenant_id)
     .single()
 
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ data })
+  if (error || !campaign) {
+    console.error('GET campaign error:', error)
+    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+  }
+
+  // Fetch campaign_products entries if multi-products
+  const { data: cpRows } = await serviceClient
+    .from('campaign_products')
+    .select('product:products(*)')
+    .eq('campaign_id', campaign.id)
+
+  let productsList = []
+  if (cpRows && cpRows.length > 0) {
+    productsList = cpRows.map((r: any) => r.product).filter(Boolean)
+  } else if (campaign.product) {
+    productsList = [campaign.product]
+  }
+
+  return NextResponse.json({
+    data: {
+      ...campaign,
+      products: productsList,
+    }
+  })
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -42,12 +65,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   updates.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const serviceClient = createServiceClient()
+  const { data, error } = await serviceClient
     .from('campaigns')
     .update(updates)
     .eq('id', params.id)
     .eq('tenant_id', userData.tenant_id)
-    .select()
+    .select('*, product:products(*), promotion:promotions(*)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -63,7 +87,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     .from('users').select('tenant_id').eq('id', user.id).single()
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { error } = await supabase
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
     .from('campaigns')
     .delete()
     .eq('id', params.id)
