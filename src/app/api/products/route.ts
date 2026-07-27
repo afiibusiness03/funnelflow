@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (!userData) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const body = await request.json()
-  const { name, platform, marketplace, asin, sku, product_url, image_url } = body
+  const { name, platform, marketplace, asin, sku, product_url, review_url, image_url } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Product name is required' }, { status: 400 })
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       asin:        asin        || null,
       sku:         sku         || null,
       product_url: product_url || null,
+      review_url:  review_url  || null,
       image_url:   image_url   || null,
       is_active:   true,
     })

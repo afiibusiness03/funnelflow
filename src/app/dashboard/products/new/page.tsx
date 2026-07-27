@@ -17,6 +17,7 @@ const schema = z.object({
   asin:        z.string().optional(),
   sku:         z.string().optional(),
   product_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  review_url:  z.string().url('Must be a valid URL').optional().or(z.literal('')),
   image_url:   z.string().url('Must be a valid URL').optional().or(z.literal('')),
 })
 
@@ -69,6 +70,7 @@ export default function NewProductPage() {
       asin:        data.asin || null,
       sku:         data.sku  || null,
       product_url: data.product_url || null,
+      review_url:  data.review_url  || null,
       image_url:   data.image_url   || null,
       is_active:   true,
     })
@@ -188,6 +190,22 @@ export default function NewProductPage() {
               )}
             />
             {errors.product_url && <p className="text-red-400 text-xs mt-1">{errors.product_url.message}</p>}
+          </div>
+
+          {/* Review URL */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Amazon Review URL <span className="text-slate-500 font-normal">(optional)</span>
+            </label>
+            <input
+              {...register('review_url')}
+              placeholder="https://www.amazon.com/review/create-review?asin=..."
+              className={cn(
+                'w-full px-4 py-2.5 rounded-lg bg-slate-900 border text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition',
+                errors.review_url ? 'border-red-500' : 'border-slate-600'
+              )}
+            />
+            {errors.review_url && <p className="text-red-400 text-xs mt-1">{errors.review_url.message}</p>}
           </div>
 
           {/* Image URL */}

@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('campaigns')
-    .select('*, product:products(*), promotion:promotions(*)')
+    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*)')
     .eq('tenant_id', userData.tenant_id)
     .order('created_at', { ascending: false })
 

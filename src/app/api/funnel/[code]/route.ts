@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
       smart_routing, smart_routing_threshold,
       custom_logo_url, custom_color, custom_thank_you_msg,
       review_url, qr_short_code, status,
-      product:products(id, name, image_url, platform, marketplace),
+      product:products!campaigns_product_id_fkey(id, name, image_url, review_url, platform, marketplace),
       promotion:promotions(id, type, delivery_message, requires_address, auto_deliver),
       tenant:tenants(name, logo_url, brand_color)
     `)
@@ -28,7 +28,7 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
   // Check if campaign has multi-products in campaign_products table
   const { data: cpRows } = await supabase
     .from('campaign_products')
-    .select('product:products(id, name, image_url, platform, marketplace)')
+    .select('product:products!campaign_products_product_id_fkey(id, name, image_url, review_url, platform, marketplace)')
     .eq('campaign_id', campaign.id)
 
   let productsList = []

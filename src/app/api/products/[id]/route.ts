@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await request.json()
-  const allowed = ['name', 'asin', 'sku', 'product_url', 'image_url', 'is_active']
+  const allowed = ['name', 'asin', 'sku', 'product_url', 'review_url', 'image_url', 'is_active']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]

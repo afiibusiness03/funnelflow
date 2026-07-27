@@ -14,7 +14,7 @@ export default async function CampaignAnalyticsPage({ params }: { params: { id: 
 
   const { data: campaign } = await supabase
     .from('campaigns')
-    .select('*, product:products(*)')
+    .select('*, product:products!campaigns_product_id_fkey(*)')
     .eq('id', params.id)
     .single()
 

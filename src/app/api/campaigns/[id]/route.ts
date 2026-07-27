@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const serviceClient = createServiceClient()
   const { data: campaign, error } = await serviceClient
     .from('campaigns')
-    .select('*, product:products(*), promotion:promotions(*), tenant:tenants(brand_color)')
+    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*), tenant:tenants(brand_color)')
     .eq('id', params.id)
     .eq('tenant_id', userData.tenant_id)
     .single()
@@ -26,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   // Fetch campaign_products entries if multi-products
   const { data: cpRows } = await serviceClient
     .from('campaign_products')
-    .select('product:products(*)')
+    .select('product:products!campaign_products_product_id_fkey(*)')
     .eq('campaign_id', campaign.id)
 
   let productsList = []
@@ -71,7 +71,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .update(updates)
     .eq('id', params.id)
     .eq('tenant_id', userData.tenant_id)
-    .select('*, product:products(*), promotion:promotions(*)')
+    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     // 2. Fetch the campaign's product marketplace for regional SP-API routing
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('product:products(marketplace)')
+      .select('product:products!campaigns_product_id_fkey(marketplace)')
       .eq('id', campaignId)
       .single()
 

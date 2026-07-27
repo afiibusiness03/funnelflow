@@ -66,6 +66,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
     platform: 'amazon',
     marketplace: 'US',
     asin: '',
+    review_url: '',
     image_url: '',
   })
 
@@ -95,7 +96,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
         setSelectedProductIds(prev => [...prev, createdProd.id])
         setValue('product_id', createdProd.id)
         setShowNewProductModal(false)
-        setNewProduct({ name: '', platform: 'amazon', marketplace: 'US', asin: '', image_url: '' })
+        setNewProduct({ name: '', platform: 'amazon', marketplace: 'US', asin: '', review_url: '', image_url: '' })
       }
     } catch (err) {
       console.error(err)
@@ -679,6 +680,16 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                   placeholder="e.g. B00XXXXXX"
                   value={newProduct.asin}
                   onChange={(e) => setNewProduct({ ...newProduct, asin: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Amazon Review URL (Optional)</label>
+                <input
+                  type="url"
+                  placeholder="https://www.amazon.com/review/create-review?asin=..."
+                  value={newProduct.review_url}
+                  onChange={(e) => setNewProduct({ ...newProduct, review_url: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
                 />
               </div>
