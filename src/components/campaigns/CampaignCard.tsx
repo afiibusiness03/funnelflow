@@ -38,18 +38,16 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
     }
   }
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!confirm('Are you sure you want to permanently delete this campaign? This will also delete all associated stats and feedback submissions.')) {
-      return
-    }
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const handleConfirmDelete = async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}`, {
         method: 'DELETE',
       })
       if (res.ok) {
+        setShowDeleteModal(false)
         router.refresh()
       } else {
         alert('Failed to delete campaign')
@@ -136,15 +134,53 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
             <Pencil className="w-3.5 h-3.5" />
           </Link>
           <button
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setShowDeleteModal(true)
+            }}
             disabled={loading}
-            className="p-1.5 text-slate-400 hover:text-red-450 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+            className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
             title="Delete campaign"
           >
             <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
           </button>
         </div>
       </div>
+
+      {/* Modern Custom Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-semibold text-white">Delete Campaign</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Are you sure you want to permanently delete <strong className="text-slate-200">{campaign.name}</strong>? All associated statistics, QR events, and feedback submissions will be erased permanently.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white font-medium text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-sm transition disabled:opacity-50 shadow-lg shadow-red-600/20"
+              >
+                {loading ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

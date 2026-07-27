@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Plus } from 'lucide-react'
@@ -15,9 +15,10 @@ export default async function ProductsPage() {
     .eq('id', user.id).single()
   if (!userData) redirect('/login')
 
-  const { data: products, count } = await supabase
+  const serviceClient = createServiceClient()
+  const { data: products, count } = await serviceClient
     .from('products')
-    .select('*, campaigns(count)', { count: 'exact' })
+    .select('*, campaigns!campaigns_product_id_fkey(count)', { count: 'exact' })
     .eq('tenant_id', userData.tenant_id)
     .order('created_at', { ascending: false })
 

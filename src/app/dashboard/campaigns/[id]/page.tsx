@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
-import { ArrowLeft, Loader2, Save, Package, Gift, Settings } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Package, Gift, Settings, Trash2 } from 'lucide-react'
 import QRCodeDisplay from '@/components/campaigns/QRCodeDisplay'
 
 const schema = z.object({
@@ -91,14 +91,16 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
     setTimeout(() => router.push('/dashboard/campaigns'), 1000)
   }
 
-  const handleDeleteCampaign = async () => {
-    if (!confirm('Are you sure you want to permanently delete this campaign? This will also delete all associated stats and feedback submissions.')) return
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const handleConfirmDeleteCampaign = async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/campaigns/${params.id}`, {
         method: 'DELETE',
       })
       if (res.ok) {
+        setShowDeleteModal(false)
         router.push('/dashboard/campaigns')
         router.refresh()
       } else {
@@ -208,9 +210,12 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
 
             {/* Review URL */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Review page URL <span className="text-slate-500 font-normal">(optional)</span>
+              <label className="block text-sm font-medium text-slate-300 mb-1">
+                Campaign Fallback Review URL <span className="text-slate-500 font-normal">(optional)</span>
               </label>
+              <p className="text-slate-400 text-xs mb-1.5">
+                Each product uses its own review link from Products Catalog. This link is used only as a fallback.
+              </p>
               <input
                 {...register('review_url')}
                 placeholder="https://amazon.com/review/create-review?asin=..."
@@ -252,7 +257,7 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
             <div className="flex items-center justify-between pt-2">
               <button
                 type="button"
-                onClick={handleDeleteCampaign}
+                onClick={() => setShowDeleteModal(true)}
                 className="text-red-400 hover:text-red-300 text-sm font-medium transition"
               >
                 Delete Campaign
@@ -287,6 +292,40 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
           )}
         </div>
       </div>
+
+      {/* Modern Custom Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6 text-red-400" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-semibold text-white">Delete Campaign</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Are you sure you want to permanently delete this campaign? All associated statistics, QR events, and feedback submissions will be erased permanently.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white font-medium text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleConfirmDeleteCampaign}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-sm transition disabled:opacity-50 shadow-lg shadow-red-600/20"
+              >
+                {loading ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
