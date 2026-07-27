@@ -83,8 +83,16 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
     ? campaign.products
     : (campaign.product ? [campaign.product] : [])
 
+  const fallbackProduct: ProductItem = {
+    id: 'default-prod',
+    name: campaign.name || 'Your Purchased Product',
+    image_url: null,
+  }
+
+  const activeProducts = productsList.length > 0 ? productsList : [fallbackProduct]
+
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
-    productsList.map(p => p.id)
+    activeProducts.map(p => p.id)
   )
 
   const [rating, setRating] = useState<number>(5)
@@ -328,13 +336,13 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   return (
     <div className="space-y-6">
       {/* 1. Multi-Product or Single Product Display */}
-      {productsList.length > 1 ? (
+      {activeProducts.length > 1 ? (
         <div className="space-y-2.5">
           <label className="block text-slate-900 font-extrabold text-sm">
             Select the product(s) you purchased <span className="text-red-500">*</span>
           </label>
           <div className="space-y-2">
-            {productsList.map((prod) => {
+            {activeProducts.map((prod) => {
               const isSelected = selectedProductIds.includes(prod.id)
               return (
                 <div
@@ -373,19 +381,19 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
             })}
           </div>
         </div>
-      ) : productsList.length === 1 ? (
+      ) : activeProducts.length === 1 ? (
         <div className="flex items-center gap-3 p-3 bg-slate-100/80 rounded-2xl border border-slate-200/80">
           <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-xs">
-            {productsList[0].image_url ? (
+            {activeProducts[0].image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={productsList[0].image_url} alt={productsList[0].name} className="w-full h-full object-cover" />
+              <img src={activeProducts[0].image_url} alt={activeProducts[0].name} className="w-full h-full object-cover" />
             ) : (
               <Package className="w-6 h-6 text-slate-400" />
             )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-slate-500 text-xs font-medium">Product Purchased</p>
-            <p className="text-slate-900 font-bold text-sm truncate">{productsList[0].name}</p>
+            <p className="text-slate-900 font-bold text-sm truncate">{activeProducts[0].name}</p>
           </div>
         </div>
       ) : null}

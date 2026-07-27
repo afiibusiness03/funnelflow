@@ -101,6 +101,48 @@ export async function POST(request: Request) {
       await deliverPromotion({ submission, campaign, customerEmail, supabase })
     }
 
+    // 7. Send instant notification email to seller Gmail
+    try {
+      // Find seller email from users table by tenant_id
+      const { data: sellerUser } = await supabase
+        .from('users')
+        .select('email')
+        .eq('tenant_id', (campaign.tenant as any).id)
+        .limit(1)
+        .single()
+
+      const sellerEmails = new Set<string>(['afiibusiness03@gmail.com', 'omaromran2091@gmail.com'])
+      if (sellerUser?.email) {
+        sellerEmails.add(sellerUser.email)
+      }
+
+      const sellerNotificationSubject = `🔔 New Claim (${rating ?? 5}★): ${customerEmail}`
+      const sellerNotificationHtml = `
+        <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px">
+          <h2 style="color:#6366f1;margin-top:0">New Customer Claim Submission! 🎁</h2>
+          <p><strong>Campaign:</strong> ${campaign.name}</p>
+          <p><strong>Customer Email:</strong> ${customerEmail}</p>
+          <p><strong>Customer Name:</strong> ${customerName || 'N/A'}</p>
+          <p><strong>Order ID:</strong> ${orderId || 'N/A'}</p>
+          <p><strong>Rating:</strong> ${'★'.repeat(rating || 5)} (${rating || 5}/5)</p>
+          <p><strong>Review Text:</strong></p>
+          <blockquote style="background:#f8fafc;border-left:4px solid #6366f1;padding:12px 16px;margin:12px 0;color:#334155;border-radius:4px">${feedbackText || 'N/A'}</blockquote>
+        </div>
+      `
+
+      // Send notification to seller email(s)
+      for (const targetEmail of Array.from(sellerEmails)) {
+        await resend.emails.send({
+          from: FROM,
+          to: targetEmail,
+          subject: sellerNotificationSubject,
+          html: sellerNotificationHtml,
+        }).catch(err => console.error(`Seller email notify error for ${targetEmail}:`, err))
+      }
+    } catch (e) {
+      console.error('Failed to notify seller:', e)
+    }
+
     return NextResponse.json({
       success: true,
       submissionId:    submission.id,
