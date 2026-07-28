@@ -215,7 +215,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           rating,
           feedbackText: data.feedbackText,
           promotionId: campaign.promotion?.id,
-          selectedProductIds,
+          selectedProductIds: selectedProductIds.filter((id) => id && id !== 'default-prod'),
         }),
       })
 

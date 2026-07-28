@@ -48,6 +48,10 @@ export async function POST(request: Request) {
         ? (rating ?? 0) >= (campaign.smart_routing_threshold ?? 4)
         : true
 
+    // Filter valid UUID product IDs only
+    const validSelectedProductIds = (Array.isArray(selectedProductIds) ? selectedProductIds : [])
+      .filter((id: any) => typeof id === 'string' && id !== 'default-prod' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(id))
+
     // 4. Create submission
     const { data: submission, error: submitError } = await supabase
       .from('funnel_submissions')
@@ -64,7 +68,7 @@ export async function POST(request: Request) {
         feedback_text:    feedbackText   ?? null,
         shipping_address: shippingAddress ?? null,
         promotion_id:     promotionId    ?? campaign.promotion_id ?? null,
-        selected_product_ids: Array.isArray(selectedProductIds) ? selectedProductIds : [],
+        selected_product_ids: validSelectedProductIds,
         review_requested: reviewRequested,
         ip_address:       ip             ?? null,
         user_agent:       userAgent      ?? null,
