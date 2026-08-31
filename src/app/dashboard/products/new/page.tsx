@@ -194,14 +194,17 @@ export default function NewProductPage() {
 
           {/* Review URL */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Amazon Review URL <span className="text-slate-500 font-normal">(optional)</span>
+            <label className="block text-sm font-medium text-slate-300 mb-1">
+              Amazon Direct Review Link <span className="text-purple-400 font-normal">(recommended)</span>
             </label>
+            <p className="text-slate-400 text-xs mb-1.5">
+              When a buyer purchases this product and leaves a 4/5-star rating in the funnel, they are automatically directed to this specific review link.
+            </p>
             <input
               {...register('review_url')}
               placeholder="https://www.amazon.com/review/create-review?asin=..."
               className={cn(
-                'w-full px-4 py-2.5 rounded-lg bg-slate-900 border text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition',
+                'w-full px-4 py-2.5 rounded-lg bg-slate-900 border text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-sm',
                 errors.review_url ? 'border-red-500' : 'border-slate-600'
               )}
             />

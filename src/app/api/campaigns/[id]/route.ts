@@ -54,6 +54,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await request.json()
+
+  if (Array.isArray(body.product_ids) && body.product_ids.length > 0) {
+    body.product_id = body.product_ids[0]
+  }
+
   const allowed = [
     'name', 'status', 'require_order_verify', 'smart_routing', 'smart_routing_threshold',
     'language', 'review_url', 'custom_thank_you_msg', 'custom_color', 'custom_logo_url',
@@ -75,6 +80,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Sync campaign_products junction table if product_ids array was sent
+  if (Array.isArray(body.product_ids) && body.product_ids.length > 0) {
+    try {
+      await serviceClient.from('campaign_products').delete().eq('campaign_id', params.id)
+      const cpEntries = body.product_ids.map((pid: string) => ({
+        campaign_id: params.id,
+        product_id: pid,
+      }))
+      await serviceClient.from('campaign_products').insert(cpEntries)
+    } catch (cpErr) {
+      console.error('Error updating campaign_products:', cpErr)
+    }
+  }
+
   return NextResponse.json({ data })
 }
 

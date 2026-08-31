@@ -4,6 +4,7 @@ import {
   QrCode, ArrowRight, Zap, Check, Star, 
   Smartphone, Lock 
 } from 'lucide-react'
+import PrivateWaitlistHero from '@/components/landing/PrivateWaitlistHero'
 
 // Default fallback site settings if DB table isn't created or seeded yet
 const DEFAULTS = {
@@ -30,9 +31,13 @@ export default async function MarketingLandingPage() {
   
   // Get active session dynamically to update header controls
   const { data: { user } } = await supabase.auth.getUser()
+  const userEmail = user?.email ?? ''
+  const isAdmin = userEmail === 'omaromran2091@gmail.com' || userEmail === 'afiibusiness03@gmail.com'
 
   // Load customizable content from site_settings (falls back to DEFAULTS if empty)
   let settings = DEFAULTS
+  let publicLandingEnabled = true
+
   try {
     const { data: siteDb } = await supabase
       .from('site_settings')
@@ -41,6 +46,9 @@ export default async function MarketingLandingPage() {
       .single()
 
     if (siteDb) {
+      if (typeof siteDb.public_landing_enabled === 'boolean') {
+        publicLandingEnabled = siteDb.public_landing_enabled
+      }
       settings = {
         hero_title:    siteDb.hero_title    || DEFAULTS.hero_title,
         hero_subtitle: siteDb.hero_subtitle || DEFAULTS.hero_subtitle,
@@ -59,6 +67,11 @@ export default async function MarketingLandingPage() {
     }
   } catch (err) {
     console.error('Could not load site settings from DB:', err)
+  }
+
+  // If public landing page is disabled and user is not admin → show Private Waitlist Hero
+  if (!publicLandingEnabled && !isAdmin) {
+    return <PrivateWaitlistHero isAdmin={false} />
   }
 
   return (

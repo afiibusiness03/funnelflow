@@ -56,6 +56,7 @@ export default function SettingsPage() {
 
   const [savingSite, setSavingSite] = useState(false)
   const [siteSaved, setSiteSaved] = useState(false)
+  const [publicLandingEnabled, setPublicLandingEnabled] = useState<boolean>(true)
 
   const isPlatformAdmin = userEmail === 'omaromran2091@gmail.com' || userEmail === 'afiibusiness03@gmail.com'
 
@@ -98,6 +99,7 @@ export default function SettingsPage() {
           .single()
 
         if (siteDb) {
+          setPublicLandingEnabled(siteDb.public_landing_enabled ?? true)
           setSiteSettings({
             hero_title:    siteDb.hero_title    || '',
             hero_subtitle: siteDb.hero_subtitle || '',
@@ -157,19 +159,20 @@ export default function SettingsPage() {
       ]
 
       await supabase.from('site_settings').upsert({
-        id:            '00000000-0000-0000-0000-000000000000',
-        hero_title:    siteSettings.hero_title,
-        hero_subtitle: siteSettings.hero_subtitle,
-        step1_title:   siteSettings.step1_title,
-        step1_desc:    siteSettings.step1_desc,
-        step2_title:   siteSettings.step2_title,
-        step2_desc:    siteSettings.step2_desc,
-        step3_title:   siteSettings.step3_title,
-        step3_desc:    siteSettings.step3_desc,
-        step4_title:   siteSettings.step4_title,
-        step4_desc:    siteSettings.step4_desc,
-        features_json: features,
-        updated_at:    new Date().toISOString()
+        id:                     '00000000-0000-0000-0000-000000000000',
+        public_landing_enabled: publicLandingEnabled,
+        hero_title:            siteSettings.hero_title,
+        hero_subtitle:         siteSettings.hero_subtitle,
+        step1_title:           siteSettings.step1_title,
+        step1_desc:            siteSettings.step1_desc,
+        step2_title:           siteSettings.step2_title,
+        step2_desc:            siteSettings.step2_desc,
+        step3_title:           siteSettings.step3_title,
+        step3_desc:            siteSettings.step3_desc,
+        step4_title:           siteSettings.step4_title,
+        step4_desc:            siteSettings.step4_desc,
+        features_json:         features,
+        updated_at:            new Date().toISOString()
       }, { onConflict: 'id' })
 
       setSiteSaved(true)
@@ -314,6 +317,36 @@ export default function SettingsPage() {
           </div>
 
           <form onSubmit={handleSaveSiteSettings} className="space-y-6">
+            {/* Platform Mode Access Toggle */}
+            <div className="bg-slate-900/90 border border-purple-500/40 p-4 rounded-xl flex items-center justify-between shadow-lg">
+              <div className="space-y-0.5">
+                <span className="text-white font-bold text-sm flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-purple-400" />
+                  Public Landing Page & Registration
+                </span>
+                <p className="text-slate-400 text-xs">
+                  {publicLandingEnabled
+                    ? '🟢 Public Mode: Home page is active, plans visible, public signups allowed.'
+                    : '🔒 Private Mode: Home page & Registration locked. Only Admin can log in. Customer QR funnels stay 100% active.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPublicLandingEnabled(!publicLandingEnabled)}
+                className={cn(
+                  'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                  publicLandingEnabled ? 'bg-purple-600' : 'bg-slate-700'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                    publicLandingEnabled ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </button>
+            </div>
+
             {/* Hero Title */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Hero Headline</label>

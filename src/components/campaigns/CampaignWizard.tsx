@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
-import { Check, Loader2, Package, Gift, Settings, QrCode, ChevronRight } from 'lucide-react'
+import { Check, Loader2, Package, Gift, Settings, QrCode, ChevronRight, Search, Trash2 } from 'lucide-react'
 import type { Product, Promotion } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 
@@ -167,6 +167,10 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(() => {
     return products && products.length > 0 ? [products[0].id] : []
   })
+  const [showSelectProductModal, setShowSelectProductModal] = useState(false)
+  const [tempModalSelectedIds, setTempModalSelectedIds] = useState<string[]>([])
+  const [modalSearchQuery, setModalSearchQuery] = useState('')
+  const [productWizardError, setProductWizardError] = useState<string | null>(null)
 
   const selectedProductId   = watch('product_id') || selectedProductIds[0]
   const selectedPromotionId = watch('promotion_id')
@@ -176,18 +180,40 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const selectedProduct   = localProducts.find(p => p.id === selectedProductId)
   const selectedPromotion = localPromotions.find(p => p.id === selectedPromotionId)
 
-  const toggleProductSelect = (id: string) => {
-    if (selectedProductIds.includes(id)) {
-      if (selectedProductIds.length > 1) {
-        const next = selectedProductIds.filter(pid => pid !== id)
-        setSelectedProductIds(next)
-        setValue('product_id', next[0])
-      }
-    } else {
-      const next = [...selectedProductIds, id]
-      setSelectedProductIds(next)
-      setValue('product_id', next[0])
+  const handleRemoveWizardProduct = (id: string) => {
+    setProductWizardError(null)
+    if (selectedProductIds.length <= 1) {
+      setProductWizardError('A campaign must have at least 1 product selected.')
+      setTimeout(() => setProductWizardError(null), 4000)
+      return
     }
+    const next = selectedProductIds.filter(pid => pid !== id)
+    setSelectedProductIds(next)
+    setValue('product_id', next[0])
+  }
+
+  const handleOpenWizardSelectModal = () => {
+    setTempModalSelectedIds([...selectedProductIds])
+    setModalSearchQuery('')
+    setShowSelectProductModal(true)
+  }
+
+  const toggleWizardModalProductCheck = (pid: string) => {
+    if (tempModalSelectedIds.includes(pid)) {
+      tempModalSelectedIds.length > 1 && setTempModalSelectedIds(tempModalSelectedIds.filter(id => id !== pid))
+    } else {
+      setTempModalSelectedIds([...tempModalSelectedIds, pid])
+    }
+  }
+
+  const handleSaveWizardModalSelection = () => {
+    if (tempModalSelectedIds.length === 0) {
+      alert('Please select at least 1 product.')
+      return
+    }
+    setSelectedProductIds([...tempModalSelectedIds])
+    setValue('product_id', tempModalSelectedIds[0])
+    setShowSelectProductModal(false)
   }
 
   const nextStep = async () => {
@@ -289,76 +315,83 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>}
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
+              <div className="space-y-4 p-5 bg-slate-900 rounded-xl border border-slate-700/80 shadow-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300">
-                      Select Product(s) <span className="text-red-400">*</span>
-                    </label>
-                    <p className="text-slate-400 text-xs">You can select multiple products for this campaign</p>
+                    <div className="flex items-center gap-2">
+                      <label className="block text-sm font-bold text-white">
+                        Campaign Product(s) <span className="text-red-400">*</span>
+                      </label>
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold text-xs border border-purple-500/30 whitespace-nowrap flex-shrink-0">
+                        {selectedProductIds.length} Included
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      Only selected products will appear in this campaign's customer funnel.
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProductModal(true)}
-                    className="text-purple-400 hover:text-purple-300 text-xs font-semibold flex items-center gap-1 transition"
-                  >
-                    + Add New Product
-                  </button>
-                </div>
-
-                {localProducts.length === 0 ? (
-                  <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 text-center">
-                    <p className="text-slate-400 text-sm mb-2">No products yet.</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleOpenWizardSelectModal}
+                      className="text-xs text-purple-300 hover:text-white font-bold bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 px-3 py-1.5 rounded-lg transition"
+                    >
+                      + Select from Catalog
+                    </button>
                     <button
                       type="button"
                       onClick={() => setShowNewProductModal(true)}
-                      className="text-purple-400 text-sm hover:underline font-medium"
+                      className="text-xs text-slate-300 hover:text-white font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-1.5 rounded-lg transition"
                     >
-                      Add a product first →
+                      + Create Product
                     </button>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {localProducts.map((product) => {
-                      const isSelected = selectedProductIds.includes(product.id)
-                      return (
-                        <div
-                          key={product.id}
-                          onClick={() => toggleProductSelect(product.id)}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition cursor-pointer',
-                            isSelected
-                              ? 'border-purple-500 bg-purple-500/10'
-                              : 'border-slate-700 bg-slate-900 hover:border-slate-600'
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
-                          />
-                          <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                            {product.image_url
-                              // eslint-disable-next-line @next/next/no-img-element
-                              ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                              : <Package className="w-4 h-4 text-slate-400" />
-                            }
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn('text-sm font-medium truncate', isSelected ? 'text-white' : 'text-slate-300')}>
-                              {product.name}
-                            </p>
-                            <p className="text-slate-500 text-xs capitalize">
-                              {product.platform} · {product.marketplace}
-                              {product.asin ? ` · ${product.asin}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    })}
+                </div>
+
+                {productWizardError && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg px-3 py-2 text-xs font-semibold">
+                    ⚠️ {productWizardError}
                   </div>
                 )}
+
+                {/* List of Attached Products */}
+                <div className="space-y-2.5">
+                  {localProducts
+                    .filter((prod) => selectedProductIds.includes(prod.id))
+                    .map((prod) => (
+                      <div
+                        key={prod.id}
+                        className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-950 border border-purple-500/60 shadow-sm transition"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {prod.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-5 h-5 text-purple-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                          <span className="text-slate-300 font-medium text-xs block mt-0.5">
+                            <span className="text-purple-400 capitalize">{prod.platform}</span> · {prod.marketplace}
+                            {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
+                          Included
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveWizardProduct(prod.id)}
+                          title="Remove product from campaign"
+                          className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition ml-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
                 {errors.product_id && <p className="text-red-400 text-xs mt-1">{errors.product_id.message}</p>}
               </div>
             </div>
@@ -684,7 +717,8 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Amazon Review URL (Optional)</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Amazon Direct Review Link <span className="text-purple-400 font-normal">(recommended)</span></label>
+                <p className="text-slate-400 text-[11px] mb-1">Directs happy buyers straight to this product's Amazon review page.</p>
                 <input
                   type="url"
                   placeholder="https://www.amazon.com/review/create-review?asin=..."
@@ -803,6 +837,160 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 {savingPromo && <Loader2 className="w-3 h-3 animate-spin" />}
                 Save Promotion
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Products from Catalog Popup Modal */}
+      {showSelectProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700/90 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg">Add Products to Campaign</h3>
+                  <p className="text-slate-400 text-xs">Select products from your catalog to include in this campaign</p>
+                </div>
+              </div>
+              {tempModalSelectedIds.length > 0 && (
+                <span className="text-xs font-bold px-3 py-1 bg-purple-600 text-white rounded-full shadow-xs whitespace-nowrap flex-shrink-0">
+                  {tempModalSelectedIds.length} Selected
+                </span>
+              )}
+            </div>
+
+            {/* Live Search Bar */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={modalSearchQuery}
+                onChange={(e) => setModalSearchQuery(e.target.value)}
+                placeholder="Search product name, ASIN, SKU..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs font-medium"
+              />
+            </div>
+
+            {/* Products List with Checkboxes (Showing ONLY unadded products) */}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {(() => {
+                const unaddedProducts = localProducts.filter((prod) => !selectedProductIds.includes(prod.id))
+                const filtered = unaddedProducts.filter((prod) => {
+                  const q = modalSearchQuery.toLowerCase().trim()
+                  return (
+                    !q ||
+                    prod.name.toLowerCase().includes(q) ||
+                    (prod.asin && prod.asin.toLowerCase().includes(q)) ||
+                    (prod.sku && prod.sku.toLowerCase().includes(q))
+                  )
+                })
+
+                if (unaddedProducts.length === 0) {
+                  return (
+                    <div className="py-8 px-4 text-center bg-slate-950/60 rounded-xl border border-slate-800 space-y-3">
+                      <p className="text-slate-300 font-medium text-sm">
+                        🎉 All products in your catalog are already added to this campaign!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSelectProductModal(false)
+                          setShowNewProductModal(true)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-purple-600/20"
+                      >
+                        + Create a Brand New Product
+                      </button>
+                    </div>
+                  )
+                }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-6 text-center text-slate-400 text-xs font-medium">
+                      No matching unadded products found for "{modalSearchQuery}".
+                    </div>
+                  )
+                }
+
+                return filtered.map((prod) => {
+                  const isChecked = tempModalSelectedIds.includes(prod.id)
+                  return (
+                    <div
+                      key={prod.id}
+                      onClick={() => toggleWizardModalProductCheck(prod.id)}
+                      className={cn(
+                        'flex items-center gap-3.5 p-3.5 rounded-xl border transition cursor-pointer',
+                        isChecked
+                          ? 'bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-900/20'
+                          : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        readOnly
+                        className="w-4.5 h-4.5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      />
+                      <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {prod.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-5 h-5 text-purple-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                        <span className="text-slate-300 font-semibold text-xs block mt-0.5">
+                          <span className="text-purple-400 font-bold capitalize">{prod.platform}</span> · {prod.marketplace}
+                          {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
+                        </span>
+                      </div>
+                      {isChecked && (
+                        <span className="text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSelectProductModal(false)
+                  setShowNewProductModal(true)
+                }}
+                className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition"
+              >
+                + Create New Product
+              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowSelectProductModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={tempModalSelectedIds.length === 0}
+                  onClick={handleSaveWizardModalSelection}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white text-xs font-bold transition shadow-lg shadow-purple-600/20"
+                >
+                  Add Selected Products ({tempModalSelectedIds.length})
+                </button>
+              </div>
             </div>
           </div>
         </div>

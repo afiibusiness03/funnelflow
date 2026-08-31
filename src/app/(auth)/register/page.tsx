@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils/helpers'
-import { Loader2, QrCode, Eye, EyeOff, Check } from 'lucide-react'
+import { Loader2, QrCode, Eye, EyeOff, Check, Lock } from 'lucide-react'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -36,6 +36,28 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isPrivateMode, setIsPrivateMode] = useState(false)
+  const [loadingCheck, setLoadingCheck] = useState(true)
+
+  useEffect(() => {
+    const checkSiteMode = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const email = user?.email ?? ''
+      const isAdmin = email === 'omaromran2091@gmail.com' || email === 'afiibusiness03@gmail.com'
+
+      const { data: siteDb } = await supabase
+        .from('site_settings')
+        .select('public_landing_enabled')
+        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .single()
+
+      if (siteDb && siteDb.public_landing_enabled === false && !isAdmin) {
+        setIsPrivateMode(true)
+      }
+      setLoadingCheck(false)
+    }
+    checkSiteMode()
+  }, [])
 
   const {
     register,
@@ -93,6 +115,33 @@ export default function RegisterPage() {
 
     router.push('/dashboard')
     router.refresh()
+  }
+
+  if (isPrivateMode) {
+    return (
+      <div className="auth-page-root min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-2xl font-black text-white">Private Beta / Invite Only 🔒</h2>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Public registration is currently closed. If you are an administrator, please sign in below.
+            </p>
+          </div>
+          <Link
+            href="/login"
+            className="block w-full bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold py-3.5 rounded-xl transition text-center shadow-lg shadow-indigo-500/30 text-base"
+          >
+            Sign In to Dashboard →
+          </Link>
+          <p className="text-slate-500 text-xs">
+            Want early access? Visit <Link href="/" className="text-indigo-400 hover:underline">homepage</Link> to submit access request.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (success) {
