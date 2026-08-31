@@ -23,44 +23,24 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
   }
 
-  // 2. Fetch tenant branding info
-  let tenant = null
-  if (campaign.tenant_id) {
-    const { data: t } = await supabase
-      .from('tenants')
-      .select('name, logo_url, brand_color')
-      .eq('id', campaign.tenant_id)
-      .single()
-    tenant = t
-  }
-
-  // 3. Fetch primary product if set
-  let primaryProduct = null
-  if (campaign.product_id) {
-    const { data: p } = await supabase
-      .from('products')
-      .select('id, name, image_url, review_url, platform, marketplace')
-      .eq('id', campaign.product_id)
-      .single()
-    primaryProduct = p
-  }
-
-  // 4. Fetch promotion details if set
-  let promotion = null
-  if (campaign.promotion_id) {
-    const { data: pr } = await supabase
-      .from('promotions')
-      .select('id, type, delivery_message, requires_address, auto_deliver')
-      .eq('id', campaign.promotion_id)
-      .single()
-    promotion = pr
-  }
-
-  // 5. Fetch campaign_products entries if multi-product
-  const { data: cpRows } = await supabase
-    .from('campaign_products')
-    .select('product_id')
-    .eq('campaign_id', campaign.id)
+  // 2. Parallelize fetching tenant, primary product, promotion, and campaign_products
+  const [
+    { data: tenant },
+    { data: primaryProduct },
+    { data: promotion },
+    { data: cpRows }
+  ] = await Promise.all([
+    campaign.tenant_id
+      ? supabase.from('tenants').select('name, logo_url, brand_color').eq('id', campaign.tenant_id).single()
+      : Promise.resolve({ data: null }),
+    campaign.product_id
+      ? supabase.from('products').select('id, name, image_url, review_url, platform, marketplace').eq('id', campaign.product_id).single()
+      : Promise.resolve({ data: null }),
+    campaign.promotion_id
+      ? supabase.from('promotions').select('id, type, delivery_message, requires_address, auto_deliver').eq('id', campaign.promotion_id).single()
+      : Promise.resolve({ data: null }),
+    supabase.from('campaign_products').select('product_id').eq('campaign_id', campaign.id),
+  ])
 
   let productsList: any[] = []
   if (cpRows && cpRows.length > 0) {

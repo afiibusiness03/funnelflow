@@ -11,23 +11,26 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const serviceClient = createServiceClient()
-  const { data: campaign, error } = await serviceClient
-    .from('campaigns')
-    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*), tenant:tenants(brand_color)')
-    .eq('id', params.id)
-    .eq('tenant_id', userData.tenant_id)
-    .single()
+  const [
+    { data: campaign, error },
+    { data: cpRows }
+  ] = await Promise.all([
+    serviceClient
+      .from('campaigns')
+      .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*), tenant:tenants(brand_color)')
+      .eq('id', params.id)
+      .eq('tenant_id', userData.tenant_id)
+      .single(),
+    serviceClient
+      .from('campaign_products')
+      .select('product:products!campaign_products_product_id_fkey(*)')
+      .eq('campaign_id', params.id)
+  ])
 
   if (error || !campaign) {
     console.error('GET campaign error:', error)
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
   }
-
-  // Fetch campaign_products entries if multi-products
-  const { data: cpRows } = await serviceClient
-    .from('campaign_products')
-    .select('product:products!campaign_products_product_id_fkey(*)')
-    .eq('campaign_id', campaign.id)
 
   let productsList = []
   if (cpRows && cpRows.length > 0) {
