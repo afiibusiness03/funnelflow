@@ -1,36 +1,35 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createHash } from 'node:crypto'
+import { requireAccount } from '@/lib/security/access'
+import { apiError, HttpError, uuid } from '@/lib/security/http'
+import { rateLimit } from '@/lib/security/rate-limit'
 import { generateQRSvg, generateQRPng } from '@/lib/qr/generate'
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { searchParams } = new URL(request.url)
-  const format = searchParams.get('format') ?? 'svg'   // svg | png
-  const color  = searchParams.get('color')  ?? '#000000'
-
-  const { data: campaign } = await supabase
-    .from('campaigns').select('qr_short_code').eq('id', params.id).single()
-
-  if (!campaign) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  if (format === 'png') {
-    const buffer = await generateQRPng({ shortCode: campaign.qr_short_code, color })
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        'Content-Type': 'image/png',
-        'Content-Disposition': `attachment; filename="qr-${campaign.qr_short_code}.png"`,
-      },
-    })
-  }
-
-  const svg = await generateQRSvg({ shortCode: campaign.qr_short_code, color })
-  return new NextResponse(svg, {
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Content-Disposition': `attachment; filename="qr-${campaign.qr_short_code}.svg"`,
-    },
-  })
+// Bounded warm-instance cache: authorization still runs before every read.
+const cache = new Map<string, { body: string | Uint8Array; etag: string; expires: number }>()
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { supabase, profile } = await requireAccount()
+    const { id } = await params
+    const query = new URL(request.url).searchParams
+    const format = query.get('format') ?? 'svg', color = query.get('color') ?? '#000000'
+    if (!uuid.safeParse(id).success || !['svg', 'png'].includes(format) || !/^#[0-9a-f]{6}$/i.test(color)) throw new HttpError(400, 'Invalid QR options')
+    const { data: campaign } = await supabase.from('campaigns').select('qr_short_code').eq('id', id).eq('tenant_id', profile.tenant_id).single()
+    if (!campaign) throw new HttpError(404, 'Campaign not found')
+    const key = `${campaign.qr_short_code}/${format}/${color.toLowerCase()}`
+    let entry = cache.get(key)
+    if (!entry || entry.expires < Date.now()) {
+      await rateLimit(request, 'qr-generate', 20)
+      const options = { shortCode: campaign.qr_short_code, color }
+      const body = format === 'png' ? new Uint8Array(await generateQRPng(options)) : await generateQRSvg(options)
+      entry = { body, etag: `"${createHash('sha256').update(body).digest('hex')}"`, expires: Date.now() + 600000 }
+      if (cache.size >= 100) cache.delete(cache.keys().next().value!)
+      cache.set(key, entry)
+    }
+    const headers = { 'Content-Type': format === 'png' ? 'image/png' : 'image/svg+xml',
+      'Content-Disposition': `attachment; filename="qr-${campaign.qr_short_code}.${format}"`,
+      'Cache-Control': 'private, no-cache', ETag: entry.etag }
+    if (request.headers.get('if-none-match') === entry.etag) return new NextResponse(null, { status: 304, headers })
+    return new NextResponse(entry.body as BodyInit, { headers })
+  } catch (error) { return apiError(error) }
 }

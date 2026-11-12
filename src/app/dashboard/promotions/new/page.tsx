@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils/helpers'
 import { ArrowLeft, Loader2, Tag, Download, CreditCard, MapPin, Mail, Gift } from 'lucide-react'
 
@@ -39,36 +38,27 @@ const TYPE_OPTIONS = [
 
 export default function NewPromotionPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  } = useForm<z.input<typeof schema>, unknown, FormData>({
     resolver: zodResolver(schema),
     defaultValues: { type: 'coupon_code', auto_deliver: true, download_expires_hours: 48, gift_card_currency: 'USD', discount_type: 'percentage', discount_currency: 'USD' },
   })
 
-  const selectedType   = watch('type')
-  const discountType   = watch('discount_type')
-  const discountValue  = watch('discount_value')
-  const couponCode     = watch('coupon_code')
+  const selectedType   = useWatch({ control, name: 'type' })
+  const discountType   = useWatch({ control, name: 'discount_type' })
+  const discountValue  = useWatch({ control, name: 'discount_value' })
+  const couponCode     = useWatch({ control, name: 'coupon_code' })
 
   const onSubmit = async (data: FormData) => {
     setServerError(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
-
-    const { data: userData } = await supabase
-      .from('users').select('tenant_id').eq('id', user.id).single()
-    if (!userData) return
-
-    const { error } = await supabase.from('promotions').insert({
-      tenant_id:        userData.tenant_id,
+    const response = await fetch('/api/promotions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       name:             data.name,
       type:             data.type,
       coupon_code:      data.coupon_code        || null,
@@ -84,9 +74,9 @@ export default function NewPromotionPage() {
       delivery_message: data.delivery_message    || null,
       max_redemptions:  data.max_redemptions ? parseInt(data.max_redemptions) : null,
       is_active:        true,
-    })
+    }) })
 
-    if (error) { setServerError(error.message); return }
+    if (!response.ok) { const result=await response.json(); setServerError(result.error ?? 'Unable to create promotion'); return }
     router.push('/dashboard/promotions')
     router.refresh()
   }

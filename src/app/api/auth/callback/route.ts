@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { safeRedirect } from '@/lib/security/http'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -10,7 +11,12 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const {data:{user}}=await supabase.auth.getUser()
+      if(user){
+        const {error:accountError}=await supabase.rpc('create_tenant_account',{p_name:String(user.user_metadata.business_name || 'My business').slice(0,200),p_full_name:String(user.user_metadata.full_name || '').slice(0,200)})
+        if(accountError)return NextResponse.redirect(new URL('/login?error=account_unavailable',origin))
+      }
+      return NextResponse.redirect(safeRedirect(next, origin))
     }
   }
 

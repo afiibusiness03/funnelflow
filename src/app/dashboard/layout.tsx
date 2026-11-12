@@ -1,3 +1,4 @@
+import { getAccount, hasAccess } from '@/lib/security/access'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
@@ -12,22 +13,12 @@ function getTrialDaysLeft(trialEndsAt: string | null): number | null {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
+  let account
+  try { account=await getAccount() } catch { redirect('/login') }
+  const {supabase,profile:userData}=account
+  if(!hasAccess(account.tenant))redirect('/pricing?expired=true')
 
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  // Get user record with tenant
-  const { data: userData } = await supabase
-    .from('users')
-    .select('*, tenant:tenants(*)')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant) redirect('/login')
-
-  const tenant = userData.tenant as {
+  const tenant = account.tenant as {
     id: string
     name: string
     logo_url: string | null

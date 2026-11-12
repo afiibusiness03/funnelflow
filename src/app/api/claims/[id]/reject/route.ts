@@ -1,25 +1,16 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  const body = await request.json().catch(() => ({}))
-  const reason = body.reason ?? 'Rejected by seller'
-
-  const service = createServiceClient()
-  const { error } = await service
-    .from('funnel_submissions')
-    .update({ claim_status: 'rejected', flag_reason: reason, is_flagged: true })
-    .eq('id', params.id)
-    .eq('tenant_id', userData.tenant_id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+import { z } from 'zod'
+import { requireAccount } from '@/lib/security/access'
+import { apiError, HttpError, readJson, uuid } from '@/lib/security/http'
+import { createServiceClient } from '@/lib/supabase/server'
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { profile } = await requireAccount({ write: true })
+    const { id } = await params
+    if (!uuid.safeParse(id).success) throw new HttpError(400,'Invalid claim')
+    const body = await readJson(request,z.object({ reason:z.string().trim().max(1000).default('Rejected by seller') }))
+    const { data,error } = await createServiceClient().from('funnel_submissions').update({claim_status:'rejected',flag_reason:body.reason,is_flagged:true}).eq('id',id).eq('tenant_id',profile.tenant_id).eq('claim_status','pending').select('id').single()
+    if (error || !data) throw new HttpError(409,'Only pending claims can be rejected')
+    return NextResponse.json({success:true})
+  } catch(error) { return apiError(error) }
 }

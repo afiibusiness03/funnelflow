@@ -15,6 +15,7 @@ interface QRCodeDisplayProps {
 export default function QRCodeDisplay({
   campaignId, shortCode, qrCodeUrl, brandColor = '#6366f1', funnelUrl
 }: QRCodeDisplayProps) {
+  const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
@@ -26,9 +27,11 @@ export default function QRCodeDisplay({
 
   const downloadQR = async (format: 'svg' | 'png') => {
     setDownloading(true)
+    setError(null)
     try {
       const color = encodeURIComponent(brandColor)
       const res = await fetch(`/api/campaigns/${campaignId}/qr?format=${format}&color=${color}`)
+      if (!res.ok) throw new Error('Unable to download QR. Please try again.')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -36,6 +39,8 @@ export default function QRCodeDisplay({
       a.download = `qr-${shortCode}.${format}`
       a.click()
       URL.revokeObjectURL(url)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Download failed')
     } finally {
       setDownloading(false)
     }
@@ -43,6 +48,7 @@ export default function QRCodeDisplay({
 
   return (
     <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+      {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       <h3 className="text-white font-semibold mb-4">Your QR Code</h3>
 
       {/* QR Preview */}

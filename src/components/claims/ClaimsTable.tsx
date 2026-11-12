@@ -7,6 +7,7 @@ import ClaimActions from './ClaimActions'
 
 export interface ClaimRow {
   id: string
+  shipping_address?: { line1?: string; line2?: string; city?: string; state?: string; zip?: string; country?: string } | null
   customer_email: string
   customer_name:  string | null
   rating:         number | null
@@ -113,6 +114,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
               {/* Actions */}
               <div onClick={(e) => e.stopPropagation()}>
                 <ClaimActions
+                  promotionType={claim.promotion?.type}
                   claimId={claim.id}
                   status={claim.claim_status}
                   isFlagged={claim.is_flagged}
@@ -124,6 +126,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
             {/* Expanded detail */}
             {expanded && (
               <div className="px-5 pb-5 pt-0 border-t border-slate-700/50 space-y-3">
+              {claim.shipping_address && <p className="text-sm text-slate-300 break-words">Shipping: {Object.values(claim.shipping_address).filter(Boolean).join(', ')}</p>}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                   {[
                     { label: 'Order ID',   value: claim.order_id ?? '—' },

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
@@ -25,11 +25,13 @@ const PRESET_COLORS = [
 
 export default function SettingsPage() {
   const supabase = createClient()
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState('')
+  const [isAdminAccount, setIsAdminAccount] = useState(false)
   const [userName, setUserName]   = useState('')
 
   // ─── Site Customizer Admin States ────────────────────────────
@@ -58,14 +60,14 @@ export default function SettingsPage() {
   const [siteSaved, setSiteSaved] = useState(false)
   const [publicLandingEnabled, setPublicLandingEnabled] = useState<boolean>(true)
 
-  const isPlatformAdmin = userEmail === 'omaromran2091@gmail.com' || userEmail === 'afiibusiness03@gmail.com'
+  const isPlatformAdmin = isAdminAccount
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { brand_color: '#f97316' },
   })
 
-  const brandColor = watch('brand_color')
+  const brandColor = useWatch({ control, name: 'brand_color' })
 
   useEffect(() => {
     const load = async () => {
@@ -73,6 +75,7 @@ export default function SettingsPage() {
       if (!user) return
       const email = user.email ?? ''
       setUserEmail(email)
+      setIsAdminAccount(user.app_metadata?.platform_admin === true)
 
       const { data: userData } = await supabase
         .from('users')
@@ -91,7 +94,7 @@ export default function SettingsPage() {
       })
 
       // Load marketing page customization settings if email matches admin
-      if (email === 'omaromran2091@gmail.com' || email === 'afiibusiness03@gmail.com') {
+      if (user?.app_metadata?.platform_admin === true) {
         const { data: siteDb } = await supabase
           .from('site_settings')
           .select('*')
@@ -127,20 +130,24 @@ export default function SettingsPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [reset, supabase])
 
   const onSubmit = async (data: FormData) => {
     if (!tenantId) return
     setSaving(true)
     setSaved(false)
+    setSaveError(null)
     try {
-      await supabase.from('tenants').update({
+      const { error } = await supabase.from('tenants').update({
         name:          data.name,
         brand_color:   data.brand_color,
         custom_domain: data.custom_domain || null,
-      }).eq('id', tenantId)
+      }).eq('id', tenantId).select('id').single()
+      if (error) throw error
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setSaveError('Unable to save settings. Check your permissions and try again.')
     } finally {
       setSaving(false)
     }
@@ -150,6 +157,7 @@ export default function SettingsPage() {
     e.preventDefault()
     setSavingSite(true)
     setSiteSaved(false)
+    setSaveError(null)
     try {
       const features = [
         { title: feat1Title, desc: feat1Desc },
@@ -158,7 +166,7 @@ export default function SettingsPage() {
         { title: feat4Title, desc: feat4Desc },
       ]
 
-      await supabase.from('site_settings').upsert({
+      const { error } = await supabase.from('site_settings').upsert({
         id:                     '00000000-0000-0000-0000-000000000000',
         public_landing_enabled: publicLandingEnabled,
         hero_title:            siteSettings.hero_title,
@@ -174,11 +182,12 @@ export default function SettingsPage() {
         features_json:         features,
         updated_at:            new Date().toISOString()
       }, { onConflict: 'id' })
+      if (error) throw error
 
       setSiteSaved(true)
       setTimeout(() => setSiteSaved(false), 2000)
     } catch (err) {
-      console.error('Error saving site settings:', err)
+      setSaveError('Unable to save site settings. Platform administrator access is required.')
     } finally {
       setSavingSite(false)
     }
@@ -192,6 +201,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-8 pb-12">
+      {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
 
       {/* Brand settings */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">

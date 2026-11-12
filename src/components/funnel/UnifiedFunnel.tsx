@@ -34,13 +34,19 @@ function getOrderIdError(platform: string): string {
 }
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
-const makeSchema = (requireVerify: boolean) =>
+const makeSchema = (requireVerify: boolean, requiresAddress: boolean) =>
   z.object({
     email: z.string().email('Please enter a valid email address'),
     name: z.string().optional(),
     orderId: z.string().optional(),
-    feedbackText: z.string().min(10, 'Please write at least 10 characters of feedback to help us improve.'),
+    feedbackText: z.string().min(10, 'Please write at least 10 characters of feedback to help us improve.').max(4000),
+    shippingAddress: z.object({ line1: z.string().trim().max(200), city: z.string().trim().max(100), zip: z.string().trim().max(32), country: z.string().trim().max(64) }).optional(),
   }).superRefine((data, ctx) => {
+    if (requiresAddress) {
+      for (const field of ['line1', 'city', 'zip', 'country'] as const) {
+        if (!data.shippingAddress?.[field]) ctx.addIssue({ code: 'custom', message: 'Required for shipping', path: ['shippingAddress', field] })
+      }
+    }
     if (requireVerify && (!data.orderId || data.orderId.trim().length < 3)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -107,7 +113,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   const requireVerify = campaign.require_order_verify
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(makeSchema(requireVerify)),
+    resolver: zodResolver(makeSchema(requireVerify, !!campaign.promotion?.requires_address)),
     defaultValues: {
       feedbackText: '',
     },
@@ -176,28 +182,8 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
         return
       }
 
-      // Remote order verify call
-      setSubmitting(true)
-      try {
-        const verifyRes = await fetch('/api/funnel/verify-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, platform, campaignId: campaign.id }),
-        })
-        const verifyJson = await verifyRes.json()
-        if (!verifyJson.verified) {
-          setServerError(verifyJson.error ?? "We couldn't verify this order. Please check your order ID.")
-          setSubmitting(false)
-          return
-        }
-      } catch (err) {
-        setServerError('Verification failed. Please try again.')
-        setSubmitting(false)
-        return
-      }
-    } else {
-      setSubmitting(true)
     }
+    setSubmitting(true)
 
     try {
       // 2. Submit Funnel Submission
@@ -209,12 +195,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           customerEmail: data.email,
           customerName: data.name,
           orderId: data.orderId ?? '',
-          orderVerified: true,
           platform: campaign.product?.platform,
           marketplace: campaign.product?.marketplace,
           rating,
           feedbackText: data.feedbackText,
           promotionId: campaign.promotion?.id,
+          shippingAddress: campaign.promotion?.requires_address ? data.shippingAddress : undefined,
           selectedProductIds: selectedProductIds.filter((id) => id && id !== 'default-prod'),
         }),
       })
@@ -250,15 +236,15 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
       productsList.forEach(p => {
         if (selectedProductIds.includes(p.id)) {
           const url = p.review_url || campaign.review_url
-          if (url && !reviewUrls.includes(url)) reviewUrls.push(url)
+          if (url?.startsWith('https://') && !reviewUrls.includes(url)) reviewUrls.push(url)
         }
       })
-    } else if (campaign.review_url) {
+    } else if (campaign.review_url && /^https:\/\//i.test(campaign.review_url)) {
       reviewUrls.push(campaign.review_url)
     }
 
     if (reviewUrls.length > 0) {
-      reviewUrls.forEach(url => window.open(url, '_blank'))
+      reviewUrls.forEach(url => window.open(url, '_blank', 'noopener,noreferrer'))
     }
   }
 
@@ -315,6 +301,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
               Clicking this button copies your feedback to your clipboard and opens Amazon in a new tab so you can easily paste it!
             </p>
           </div>
+        )}
+
+        {submissionResult?.manualReview && (
+          <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+            Your claim has been saved. The seller will review your order and arrange any approved reward.
+          </p>
         )}
 
         {submissionResult?.promotionDelivered && (
@@ -506,6 +498,16 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
             )}
           </div>
         </div>
+
+        {campaign.promotion?.requires_address && <fieldset className="space-y-3">
+          <legend className="text-sm font-bold text-slate-800">Shipping address</legend>
+          <p className="text-xs text-slate-500">Your seller needs this address to send your physical reward.</p>
+          {([{ key: 'line1', label: 'Street address', auto: 'address-line1' }, { key: 'city', label: 'City', auto: 'address-level2' }, { key: 'zip', label: 'Postal code', auto: 'postal-code' }, { key: 'country', label: 'Country', auto: 'country-name' }] as const).map(field => <label key={field.key} className="block text-xs font-bold text-slate-700">
+            {field.label}
+            <input {...register(`shippingAddress.${field.key}`)} autoComplete={field.auto} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900" />
+            {errors.shippingAddress?.[field.key] && <span className="text-red-500">{errors.shippingAddress[field.key]?.message}</span>}
+          </label>)}
+        </fieldset>}
 
         {/* 4. Single Submit Button */}
         <button

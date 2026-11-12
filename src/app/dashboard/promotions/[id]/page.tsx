@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
@@ -25,7 +25,8 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-export default function EditPromotionPage({ params }: { params: { id: string } }) {
+export default function EditPromotionPage({ params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = use(routeParams)
   const router = useRouter()
   const [loading, setLoading]         = useState(true)
   const [serverError, setServerError]   = useState<string | null>(null)
@@ -36,13 +37,13 @@ export default function EditPromotionPage({ params }: { params: { id: string } }
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  const discountType  = watch('discount_type')
-  const discountValue = watch('discount_value')
+  const discountType  = useWatch({ control, name: 'discount_type' })
+  const discountValue = useWatch({ control, name: 'discount_value' })
 
   useEffect(() => {
     fetch(`/api/promotions/${params.id}`)
@@ -257,7 +258,7 @@ export default function EditPromotionPage({ params }: { params: { id: string } }
             <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
               <div>
                 <p className="text-slate-200 text-sm font-medium">Active</p>
-                <p className="text-slate-500 text-xs mt-0.5">Inactive promotions won't be offered to customers</p>
+                <p className="text-slate-500 text-xs mt-0.5">Inactive promotions won&apos;t be offered to customers</p>
               </div>
               <input type="checkbox" {...register('is_active')} className="sr-only peer" id="is_active" />
               <label htmlFor="is_active" className="w-10 h-5 bg-slate-700 peer-checked:bg-green-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />

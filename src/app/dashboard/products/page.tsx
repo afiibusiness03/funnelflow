@@ -1,3 +1,5 @@
+import { getAccount } from '@/lib/security/access'
+import Pagination from '@/components/dashboard/Pagination'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -5,24 +7,16 @@ import { Package, Plus } from 'lucide-react'
 import ProductList from '@/components/products/ProductList'
 
 
-export default async function ProductsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id, tenant:tenants(max_products, plan)')
-    .eq('id', user.id).single()
-  if (!userData) redirect('/login')
-
-  const serviceClient = createServiceClient()
-  const { data: products, count } = await serviceClient
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const {supabase,profile:userData}=await getAccount()
+  const requestedPage = Number((await searchParams).page ?? 1)
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10000) : 1
+  const { data: products, count } = await supabase
     .from('products')
     .select('*, campaigns!campaigns_product_id_fkey(count)', { count: 'exact' })
     .eq('tenant_id', userData.tenant_id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }).range((page - 1) * 50, page * 50 - 1)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant = (userData.tenant as unknown) as { max_products: number; plan: string } | null
   const maxProducts = tenant?.max_products ?? 1
   const atLimit = (count ?? 0) >= maxProducts
@@ -82,6 +76,7 @@ export default async function ProductsPage() {
           )}
         </div>
       )}
+      <Pagination page={page} total={count ?? 0} pageSize={50} path="/dashboard/products" />
     </div>
   )
 }

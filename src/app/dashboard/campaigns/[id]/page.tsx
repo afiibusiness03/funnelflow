@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
@@ -32,13 +32,14 @@ const LANGUAGES = [
   { value: 'zh', label: 'Chinese' },
 ]
 
-export default function EditCampaignPage({ params }: { params: { id: string } }) {
+export default function EditCampaignPage({ params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = use(routeParams)
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [serverError, setServerError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [campaignData, setCampaignData] = useState<any>(null)
-  const [origin, setOrigin] = useState('')
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.amazinreview.com'
 
   // Product selection & search & quick add states
   const [allProducts, setAllProducts] = useState<any[]>([])
@@ -58,23 +59,17 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
     image_url: '',
   })
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setOrigin(window.location.origin)
-    }
-  }, [])
-
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  const smartRouting = watch('smart_routing')
-  const threshold    = watch('smart_routing_threshold')
+  const smartRouting = useWatch({ control, name: 'smart_routing' })
+  const threshold    = useWatch({ control, name: 'smart_routing_threshold' })
 
   // Load current campaign data + product catalog
   useEffect(() => {
@@ -280,7 +275,7 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
                     </span>
                   </div>
                   <p className="text-slate-400 text-xs mt-0.5">
-                    Only selected products will appear in this campaign's customer funnel.
+                    Only selected products will appear in this campaign&apos;s customer funnel.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -671,7 +666,7 @@ export default function EditCampaignPage({ params }: { params: { id: string } })
                 if (filtered.length === 0) {
                   return (
                     <div className="py-6 text-center text-slate-400 text-xs font-medium">
-                      No matching unadded products found for "{modalSearchQuery}".
+                      No matching unadded products found for &quot;{modalSearchQuery}&quot;.
                     </div>
                   )
                 }

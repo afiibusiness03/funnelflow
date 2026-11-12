@@ -1,27 +1,26 @@
+import { requireAccount } from '@/lib/security/access'
+import { apiError, checkOrigin, readJson } from '@/lib/security/http'
+import { campaignSchema } from '@/lib/security/schemas'
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function GET(_req: Request, { params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = await routeParams
+  let account
+  try { account = await requireAccount({ write: false }) } catch (error) { return apiError(error) }
+  const { supabase, profile: userData } = account
 
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  const serviceClient = createServiceClient()
   const [
     { data: campaign, error },
     { data: cpRows }
   ] = await Promise.all([
-    serviceClient
+    supabase
       .from('campaigns')
       .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*), tenant:tenants(brand_color)')
       .eq('id', params.id)
       .eq('tenant_id', userData.tenant_id)
       .single(),
-    serviceClient
+    supabase
       .from('campaign_products')
       .select('product:products!campaign_products_product_id_fkey(*)')
       .eq('campaign_id', params.id)
@@ -47,19 +46,27 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   })
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function PATCH(request: Request, { params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = await routeParams
+  let account
+  try { account = await requireAccount({ write: true }); checkOrigin(request) } catch (error) { return apiError(error) }
+  const { supabase, profile: userData } = account
 
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  const body = await request.json()
+  let body
+  try { body = await readJson(request, campaignSchema.partial()) } catch (error) { return apiError(error) }
 
   if (Array.isArray(body.product_ids) && body.product_ids.length > 0) {
     body.product_id = body.product_ids[0]
+  }
+
+  const requestedProducts = body.product_ids?.length ? [...new Set(body.product_ids)] : body.product_id ? [body.product_id] : null
+  if (requestedProducts) {
+    const { data: owned, error: ownError } = await supabase.from('products').select('id').eq('tenant_id', userData.tenant_id).in('id', requestedProducts)
+    if (ownError || owned?.length !== requestedProducts.length) return NextResponse.json({ error: 'Invalid product selection' }, { status: 400 })
+  }
+  if (body.promotion_id) {
+    const { data: owned } = await supabase.from('promotions').select('id').eq('tenant_id', userData.tenant_id).eq('id', body.promotion_id).single()
+    if (!owned) return NextResponse.json({ error: 'Invalid promotion' }, { status: 400 })
   }
 
   const allowed = [
@@ -69,7 +76,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
-    if (key in body) updates[key] = body[key]
+    if (key in body) updates[key] = body[key as keyof typeof body]
   }
   updates.updated_at = new Date().toISOString()
 
@@ -82,33 +89,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*)')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Unable to save this change' }, { status: 500 })
 
-  // Sync campaign_products junction table if product_ids array was sent
-  if (Array.isArray(body.product_ids) && body.product_ids.length > 0) {
-    try {
-      await serviceClient.from('campaign_products').delete().eq('campaign_id', params.id)
-      const cpEntries = body.product_ids.map((pid: string) => ({
-        campaign_id: params.id,
-        product_id: pid,
-      }))
-      await serviceClient.from('campaign_products').insert(cpEntries)
-    } catch (cpErr) {
-      console.error('Error updating campaign_products:', cpErr)
-    }
+  if (requestedProducts) {
+    const { error: linksError } = await serviceClient.rpc('replace_campaign_products', { p_campaign: params.id, p_tenant: userData.tenant_id, p_products: requestedProducts })
+    if (linksError) return NextResponse.json({ error: 'Unable to save product selection' }, { status: 500 })
   }
 
   return NextResponse.json({ data })
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+export async function DELETE(request: Request, { params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = await routeParams
+  let account
+  try { account = await requireAccount({ write: true }); checkOrigin(request) } catch (error) { return apiError(error) }
+  const { supabase, profile: userData } = account
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -117,6 +112,6 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     .eq('id', params.id)
     .eq('tenant_id', userData.tenant_id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Unable to save this change' }, { status: 500 })
   return NextResponse.json({ success: true })
 }

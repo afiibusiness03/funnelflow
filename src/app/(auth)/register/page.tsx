@@ -43,7 +43,7 @@ export default function RegisterPage() {
     const checkSiteMode = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? ''
-      const isAdmin = email === 'omaromran2091@gmail.com' || email === 'afiibusiness03@gmail.com'
+      const isAdmin = user?.app_metadata?.platform_admin === true
 
       const { data: siteDb } = await supabase
         .from('site_settings')
@@ -57,7 +57,7 @@ export default function RegisterPage() {
       setLoadingCheck(false)
     }
     checkSiteMode()
-  }, [])
+  }, [supabase])
 
   const {
     register,
@@ -89,6 +89,8 @@ export default function RegisterPage() {
       setServerError('Something went wrong. Please try again.')
       return
     }
+
+    if (!authData.session) { setSuccess(true); return }
 
     // 2. Create tenant via API
     const res = await fetch('/api/tenants', {

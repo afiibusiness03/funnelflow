@@ -1,251 +1,49 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
-import { checkFraud } from '@/lib/utils/fraud-detection'
-import { resend, FROM } from '@/lib/resend/client'
-
+import { apiError, email, HttpError, readJson, uuid } from '@/lib/security/http'
+import { clientIp, rateLimit } from '@/lib/security/rate-limit'
+import { isDisposableEmail } from '@/lib/utils/fraud-detection'
+import { deliverReward } from '@/lib/resend/deliver-reward'
+import { hasAccess } from '@/lib/security/access'
+const schema = z.object({
+  campaignId: uuid, customerEmail: email, customerName: z.string().trim().max(200).optional(),
+  orderId: z.string().trim().max(100).optional(), rating: z.number().int().min(1).max(5),
+  feedbackText: z.string().trim().min(10).max(4000), selectedProductIds: z.array(uuid).max(50).default([]),
+  shippingAddress: z.object({ line1:z.string().max(200),line2:z.string().max(200).optional(),city:z.string().max(100),state:z.string().max(100).optional(),zip:z.string().max(32),country:z.string().max(64) }).optional(),
+})
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? undefined
-    const userAgent = request.headers.get('user-agent') ?? undefined
-
-    const body = await request.json()
-    const {
-      campaignId, customerEmail, customerName,
-      orderId, orderVerified, platform, marketplace,
-      rating, feedbackText,
-      shippingAddress, promotionId, selectedProductIds,
-    } = body
-
-    if (!campaignId || !customerEmail) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    const body = await readJson(request, schema)
+    await rateLimit(request, 'funnel-submit', 5, 3600)
+    if (isDisposableEmail(body.customerEmail)) throw new HttpError(400, 'Please use a permanent email address')
+    const db = createServiceClient()
+    const { data: campaign, error } = await db.from('campaigns').select('id,tenant_id,promotion_id,require_order_verify,smart_routing,smart_routing_threshold,custom_thank_you_msg,review_url,tenant:tenants(plan_status,trial_ends_at),promotion:promotions(id,auto_deliver,is_active,tenant_id,requires_address)').eq('id',body.campaignId).eq('status','active').single()
+    if (error || !campaign) throw new HttpError(404,'Campaign not found')
+    const tenant = campaign.tenant as any
+    if (!tenant || !hasAccess(tenant)) throw new HttpError(404,'Campaign not found')
+    if (campaign.require_order_verify && !body.orderId) throw new HttpError(400,'Please provide your order number for seller review')
+    const reviewRequested = !campaign.smart_routing || body.rating >= campaign.smart_routing_threshold
+    const promo = campaign.promotion as any
+    if (promo?.is_active && promo.requires_address && (!body.shippingAddress || ['line1', 'city', 'zip', 'country'].some(key => !body.shippingAddress?.[key as keyof typeof body.shippingAddress]?.trim()))) throw new HttpError(400, 'Please provide the shipping address')
+    const { data: submission, error: insertError } = await db.from('funnel_submissions').insert({
+      campaign_id:campaign.id,tenant_id:campaign.tenant_id,customer_email:body.customerEmail,customer_name:body.customerName || null,
+      order_id:body.orderId || null,order_verified:false,rating:body.rating,feedback_text:body.feedbackText,
+      selected_product_ids:[...new Set(body.selectedProductIds)],shipping_address:body.shippingAddress ?? null,
+      promotion_id:promo?.is_active && promo.tenant_id===campaign.tenant_id ? campaign.promotion_id : null,
+      review_requested:reviewRequested,claim_status:'pending',is_flagged:false,ip_address:clientIp(request),
+      user_agent:request.headers.get('user-agent')?.slice(0,512) ?? null,
+    }).select('id').single()
+    if (insertError?.code === '23505') throw new HttpError(409,'A claim for this email or order already exists')
+    if (insertError?.code === '23514') throw new HttpError(400,'Invalid campaign or product selection')
+    if (insertError || !submission) throw insertError ?? new Error('Submission failed')
+    // Essential completion event is inserted by a DB trigger in this same transaction.
+    let sent = false
+    if (!campaign.require_order_verify && promo?.auto_deliver && promo.is_active) {
+      try { sent = await deliverReward(submission.id,campaign.tenant_id,false) }
+      catch { /* Saved for seller review/retry. Never claim that an unsuccessful delivery succeeded. */ }
     }
-
-    const supabase = createServiceClient()
-
-    // 1. Load campaign + tenant info
-    const { data: campaign } = await supabase
-      .from('campaigns')
-      .select('*, promotion:promotions(*), tenant:tenants(id, name)')
-      .eq('id', campaignId)
-      .eq('status', 'active')
-      .single()
-
-    if (!campaign) {
-      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
-    }
-
-    // 2. Fraud detection
-    const { isFlagged, reason } = await checkFraud({
-      campaignId,
-      customerEmail,
-      orderId,
-      ipAddress: ip,
-    })
-
-    // 3. Smart routing — should we ask for a review?
-    const reviewRequested =
-      campaign.smart_routing
-        ? (rating ?? 0) >= (campaign.smart_routing_threshold ?? 4)
-        : true
-
-    // Filter valid UUID product IDs only
-    const validSelectedProductIds = (Array.isArray(selectedProductIds) ? selectedProductIds : [])
-      .filter((id: any) => typeof id === 'string' && id !== 'default-prod' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(id))
-
-    // 4. Create submission
-    const { data: submission, error: submitError } = await supabase
-      .from('funnel_submissions')
-      .insert({
-        campaign_id:      campaignId,
-        tenant_id:        (campaign.tenant as any).id,
-        customer_email:   customerEmail,
-        customer_name:    customerName   ?? null,
-        order_id:         orderId        ?? null,
-        order_verified:   orderVerified  ?? false,
-        platform:         platform       ?? campaign.product?.platform ?? 'amazon',
-        marketplace:      marketplace    ?? 'US',
-        rating:           rating         ?? null,
-        feedback_text:    feedbackText   ?? null,
-        shipping_address: shippingAddress ?? null,
-        promotion_id:     promotionId    ?? campaign.promotion_id ?? null,
-        selected_product_ids: validSelectedProductIds,
-        review_requested: reviewRequested,
-        ip_address:       ip             ?? null,
-        user_agent:       userAgent      ?? null,
-        is_flagged:       isFlagged,
-        flag_reason:      reason         ?? null,
-        // If flagged → rejected. Otherwise always 'approved' (delivery attempt below).
-        claim_status:     isFlagged ? 'rejected' : 'approved',
-      })
-      .select()
-      .single()
-
-    if (submitError || !submission) {
-      console.error('Submission error:', submitError)
-      return NextResponse.json({ error: 'Failed to save submission' }, { status: 500 })
-    }
-
-    // 5. Track funnel_complete event
-    await supabase.from('funnel_events').insert({
-      campaign_id:   campaignId,
-      tenant_id:     (campaign.tenant as any).id,
-      submission_id: submission.id,
-      event_type:    'funnel_complete',
-      step_number:   5,
-    })
-
-    // 6. Auto-deliver promotion asynchronously if not flagged and promo exists (NON-BLOCKING)
-    const promo = campaign.promotion
-    const hasDeliverableContent =
-      (promo?.type === 'coupon_code'      && promo?.coupon_code)  ||
-      (promo?.type === 'digital_download' && promo?.download_url) ||
-      (promo?.type === 'gift_card'        && promo?.gift_card_value)
-
-    if (!isFlagged && promo?.auto_deliver && hasDeliverableContent) {
-      deliverPromotion({ submission, campaign, customerEmail, supabase }).catch((err) =>
-        console.error('Async promo delivery error:', err)
-      )
-    }
-
-    // 7. Send instant seller notification email asynchronously (NON-BLOCKING)
-    ;(async () => {
-      try {
-        const { data: sellerUser } = await supabase
-          .from('users')
-          .select('email')
-          .eq('tenant_id', (campaign.tenant as any).id)
-          .limit(1)
-          .single()
-
-        const sellerEmails = new Set<string>(['afiibusiness03@gmail.com', 'omaromran2091@gmail.com'])
-        if (sellerUser?.email) {
-          sellerEmails.add(sellerUser.email)
-        }
-
-        const sellerNotificationSubject = `🔔 New Claim (${rating ?? 5}★): ${customerEmail}`
-        const sellerNotificationHtml = `
-          <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px">
-            <h2 style="color:#6366f1;margin-top:0">New Customer Claim Submission! 🎁</h2>
-            <p><strong>Campaign:</strong> ${campaign.name}</p>
-            <p><strong>Customer Email:</strong> ${customerEmail}</p>
-            <p><strong>Customer Name:</strong> ${customerName || 'N/A'}</p>
-            <p><strong>Order ID:</strong> ${orderId || 'N/A'}</p>
-            <p><strong>Rating:</strong> ${'★'.repeat(rating || 5)} (${rating || 5}/5)</p>
-            <p><strong>Review Text:</strong></p>
-            <blockquote style="background:#f8fafc;border-left:4px solid #6366f1;padding:12px 16px;margin:12px 0;color:#334155;border-radius:4px">${feedbackText || 'N/A'}</blockquote>
-          </div>
-        `
-
-        await Promise.allSettled(
-          Array.from(sellerEmails).map((targetEmail) =>
-            resend.emails.send({
-              from: FROM,
-              to: targetEmail,
-              subject: sellerNotificationSubject,
-              html: sellerNotificationHtml,
-            })
-          )
-        )
-      } catch (e) {
-        console.error('Failed to notify seller:', e)
-      }
-    })()
-
-    return NextResponse.json({
-      success: true,
-      submissionId:    submission.id,
-      reviewRequested,
-      reviewUrl:       campaign.review_url ?? null,
-      thankYouMessage: campaign.custom_thank_you_msg ?? null,
-      promotionDelivered: !isFlagged && campaign.promotion?.auto_deliver && (!!campaign.promotion?.coupon_code || !!campaign.promotion?.download_url || !!campaign.promotion?.gift_card_value),
-      coupon_code: (!isFlagged && promo?.type === 'coupon_code' && promo?.coupon_code)
-        ? promo.coupon_code
-        : null,
-    })
-  } catch (error) {
-    console.error('Funnel submit error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-async function deliverPromotion({ submission, campaign, customerEmail, supabase }: any) {
-  const promo = campaign.promotion
-  if (!promo) return
-
-  let subject = `Your reward from ${(campaign.tenant as any).name}`
-  let html = promo.delivery_message ?? `<p>Thank you for your purchase!</p>`
-
-  // Build promotion-specific email content
-  if (promo.type === 'coupon_code' && promo.coupon_code) {
-    const discountLabel = promo.discount_value
-      ? promo.discount_type === 'fixed_value'
-        ? `${promo.discount_currency ?? '$'}${promo.discount_value} Off`
-        : `${promo.discount_value}% Off`
-      : null
-
-    subject = `Your discount code from ${(campaign.tenant as any).name}`
-    html = `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-        <h2 style="color:#1e293b">Thank you for your purchase! 🎉</h2>
-        ${promo.delivery_message ? `<p>${promo.delivery_message}</p>` : ''}
-        <div style="background:#f1f5f9;border-radius:8px;padding:16px;text-align:center;margin:16px 0">
-          ${discountLabel ? `<p style="font-size:28px;font-weight:900;color:#6366f1;margin:0 0 4px">${discountLabel}</p>` : ''}
-          <p style="color:#64748b;font-size:12px;margin:0 0 8px">Use this code at checkout</p>
-          <p style="font-size:24px;font-weight:bold;letter-spacing:4px;color:#1e293b;margin:0;background:#fff;border:2px dashed #6366f1;border-radius:6px;padding:8px 16px;display:inline-block">${promo.coupon_code}</p>
-        </div>
-      </div>
-    `
-  } else if (promo.type === 'digital_download' && promo.download_url) {
-    subject = `Your download from ${(campaign.tenant as any).name}`
-    html = `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-        <h2 style="color:#1e293b">Your download is ready! 📥</h2>
-        ${promo.delivery_message ? `<p>${promo.delivery_message}</p>` : ''}
-        <a href="${promo.download_url}" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">
-          Download Now
-        </a>
-        <p style="color:#94a3b8;font-size:12px;margin-top:16px">Link expires in ${promo.download_expires_hours ?? 48} hours.</p>
-      </div>
-    `
-  }
-
-  try {
-    let resendId = null
-    let status = 'skipped'
-
-    if (customerEmail === 'afiibusiness03@gmail.com') {
-      const { data: emailResult } = await resend.emails.send({
-        from: FROM,
-        to: customerEmail,
-        subject,
-        html,
-      })
-      resendId = emailResult?.id ?? null
-      status = 'sent'
-    }
-
-    // Record email delivery
-    await supabase.from('email_deliveries').insert({
-      tenant_id:     (campaign.tenant as any).id,
-      submission_id: submission.id,
-      recipient_email: customerEmail,
-      subject,
-      template:      'promotion_delivery',
-      resend_id:     resendId,
-      status:        status,
-      sent_at:       new Date().toISOString(),
-    })
-
-    // Mark claim as delivered
-    await supabase
-      .from('funnel_submissions')
-      .update({
-        claim_status:    'delivered',
-        delivered_at:    new Date().toISOString(),
-        delivery_method: 'email',
-      })
-      .eq('id', submission.id)
-  } catch (err) {
-    console.error('Email delivery error:', err)
-  }
+    return NextResponse.json({ success:true,submissionId:submission.id,reviewRequested,reviewUrl:campaign.review_url,
+      thankYouMessage:campaign.custom_thank_you_msg,promotionDelivered:sent,manualReview:!sent,coupon_code:null })
+  } catch (error) { return apiError(error) }
 }

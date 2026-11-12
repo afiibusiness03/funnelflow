@@ -35,10 +35,10 @@ export default function BillingSuccessPage() {
         </div>
 
         <h1 className="text-3xl font-bold text-white mb-3">
-          Payment Successful! 🎉
+          Thank you!
         </h1>
         <p className="text-slate-400 mb-8">
-          Your account has been upgraded. Welcome to AmazinReview!
+          Your payment is being confirmed. Your plan will update after confirmation.
         </p>
 
         {/* Loading indicator */}

@@ -1,3 +1,5 @@
+import { getAccount } from '@/lib/security/access'
+import { getMetrics, dailyChart } from '@/lib/analytics/metrics'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { conversionRate } from '@/lib/utils/helpers'
@@ -6,91 +8,20 @@ import { ScansChart, RatingChart, FunnelDropoffChart } from '@/components/dashbo
 import { QrCode, Mail, Star, TrendingUp, MessageSquare, Gift } from 'lucide-react'
 
 export default async function AnalyticsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) redirect('/login')
-
-  const tenantId = userData.tenant_id
-
-  // ── Date ranges ───────────────────────────────────────────
-  const now          = new Date()
-  const last30       = new Date(now.getTime() - 30 * 86400000).toISOString()
-  const last30Prev   = new Date(now.getTime() - 60 * 86400000).toISOString()
-
-  // ── Parallel queries ──────────────────────────────────────
-  const [
-    { count: scans30 },
-    { count: scansPrev },
-    { count: completions30 },
-    { count: completionsPrev },
-    { count: totalEmails },
-    { count: pendingClaims },
-    { count: deliveredClaims },
-    { data: ratingRows },
-    { data: campaigns },
-    { data: recentEvents },
-  ] = await Promise.all([
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'qr_scan').gte('created_at', last30),
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'qr_scan')
-      .gte('created_at', last30Prev).lt('created_at', last30),
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'funnel_complete').gte('created_at', last30),
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'funnel_complete')
-      .gte('created_at', last30Prev).lt('created_at', last30),
-    supabase.from('funnel_submissions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    supabase.from('funnel_submissions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('claim_status', 'pending'),
-    supabase.from('funnel_submissions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('claim_status', 'delivered'),
-    supabase.from('funnel_submissions').select('rating')
-      .eq('tenant_id', tenantId).not('rating', 'is', null),
-    supabase.from('campaigns').select('id, name, total_scans, total_completions, total_reviews_requested, status')
-      .eq('tenant_id', tenantId).neq('status', 'archived').order('total_scans', { ascending: false }).limit(10),
-    supabase.from('funnel_events').select('event_type, created_at')
-      .eq('tenant_id', tenantId).gte('created_at', last30).order('created_at', { ascending: true }),
+  const {supabase,profile}=await getAccount()
+  const tenantId=profile.tenant_id
+  const [metrics,{data:campaigns}]=await Promise.all([
+    getMetrics(),supabase.from('campaigns').select('id,name,total_scans,total_completions,total_reviews_requested,status').eq('tenant_id',tenantId).neq('status','archived').order('total_scans',{ascending:false}).limit(10),
   ])
-
-  // ── Rating distribution ───────────────────────────────────
-  const ratingDist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  ratingRows?.forEach((r) => { if (r.rating) ratingDist[r.rating] = (ratingDist[r.rating] ?? 0) + 1 })
-  const totalRatings = Object.values(ratingDist).reduce((a, b) => a + b, 0)
-  const avgRating = totalRatings === 0 ? 0
-    : Object.entries(ratingDist).reduce((sum, [s, c]) => sum + Number(s) * c, 0) / totalRatings
-
-  // ── Scans over time (last 14 days) ────────────────────────
-  const scansMap: Record<string, { scans: number; completions: number }> = {}
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 86400000)
-    const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    scansMap[key] = { scans: 0, completions: 0 }
-  }
-  recentEvents?.forEach((e) => {
-    const key = new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    if (!scansMap[key]) return
-    if (e.event_type === 'qr_scan')        scansMap[key].scans++
-    if (e.event_type === 'funnel_complete') scansMap[key].completions++
-  })
-  const scansData = Object.entries(scansMap).map(([date, v]) => ({ date, ...v }))
-
-  // ── Funnel drop-off ───────────────────────────────────────
-  const stepCounts = { qr_scan: 0, step_1_complete: 0, step_3_complete: 0, funnel_complete: 0 }
-  recentEvents?.forEach((e) => {
-    if (e.event_type in stepCounts) stepCounts[e.event_type as keyof typeof stepCounts]++
-  })
-  const base = stepCounts.qr_scan || 1
-  const funnelData = [
-    { step: '1. QR Scanned',         count: stepCounts.qr_scan,          rate: 100 },
-    { step: '2. Order Verified',      count: stepCounts.step_1_complete,  rate: Math.round(stepCounts.step_1_complete / base * 100) },
-    { step: '3. Feedback Submitted',  count: stepCounts.step_3_complete,  rate: Math.round(stepCounts.step_3_complete / base * 100) },
-    { step: '4. Funnel Completed',    count: stepCounts.funnel_complete,  rate: Math.round(stepCounts.funnel_complete / base * 100) },
+  const {scans30,scansPrev,completions30,completionsPrev,totalEmails}=metrics
+  const deliveredClaims=metrics.statuses.delivered ?? 0
+  const ratingDist={1:0,2:0,3:0,4:0,5:0,...metrics.ratings}
+  const totalRatings=Object.values(ratingDist).reduce((a,b)=>a+b,0)
+  const avgRating=totalRatings ? Object.entries(ratingDist).reduce((sum,[rating,count])=>sum+Number(rating)*count,0)/totalRatings : 0
+  const scansData=dailyChart(metrics)
+  const funnelData=[
+    {step:'QR Scanned',count:scans30,rate:100},
+    {step:'Claims Submitted',count:completions30,rate:conversionRate(completions30,scans30)},
   ]
 
   // ── Period-over-period changes ────────────────────────────

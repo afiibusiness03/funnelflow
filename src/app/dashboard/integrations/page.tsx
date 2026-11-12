@@ -14,21 +14,21 @@ const PLATFORMS = [
   {
     id: 'amazon', name: 'Amazon', logo: '🛒',
     color: 'bg-orange-500/20 border-orange-500/30',
-    description: 'Connect your Amazon Seller account to verify orders automatically.',
+    description: 'Configure Amazon as a sales platform for manual order review.',
     setupUrl: 'https://sellercentral.amazon.com/apps/authorize',
     marketplaces: ['US', 'UK', 'CA', 'DE', 'FR', 'IT', 'ES', 'JP', 'AU', 'MX', 'IN', 'AE'],
   },
   {
     id: 'shopify', name: 'Shopify', logo: '🛍️',
     color: 'bg-green-500/20 border-green-500/30',
-    description: 'Connect your Shopify store for automatic order sync.',
+    description: 'Configure Shopify as a sales platform.',
     setupUrl: null,
     marketplaces: [],
   },
   {
     id: 'ebay', name: 'eBay', logo: '🏷️',
     color: 'bg-blue-500/20 border-blue-500/30',
-    description: 'Connect your eBay seller account to verify orders.',
+    description: 'Configure eBay as a sales platform.',
     setupUrl: null,
     marketplaces: ['US', 'UK', 'DE', 'AU', 'CA'],
   },
@@ -42,7 +42,7 @@ const PLATFORMS = [
   {
     id: 'etsy', name: 'Etsy', logo: '🎨',
     color: 'bg-orange-600/20 border-orange-600/30',
-    description: 'Connect your Etsy shop to verify purchases.',
+    description: 'Configure Etsy as a sales platform.',
     setupUrl: null,
     marketplaces: [],
   },
@@ -57,6 +57,7 @@ const PLATFORMS = [
 
 export default function IntegrationsPage() {
   const supabase = createClient()
+  const [error, setError] = useState<string | null>(null)
   const [connections, setConnections]     = useState<Connection[]>([])
   const [loading, setLoading]             = useState(true)
   const [connecting, setConnecting]       = useState<string | null>(null)
@@ -81,7 +82,7 @@ export default function IntegrationsPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [supabase])
 
   const getConnection = (platformId: string) =>
     connections.find(c => c.platform === platformId)
@@ -89,7 +90,9 @@ export default function IntegrationsPage() {
   const handleDisconnect = async (connectionId: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('platform_connections').update({ is_active: false }).eq('id', connectionId)
+    setError(null)
+    const { error } = await supabase.from('platform_connections').update({ is_active: false }).eq('id', connectionId).select('id').single()
+    if (error) { setError('Unable to change this configuration. Administrator access is required.'); return }
     setConnections(prev => prev.map(c => c.id === connectionId ? { ...c, is_active: false } : c))
   }
 
@@ -102,15 +105,13 @@ export default function IntegrationsPage() {
       .from('users').select('tenant_id').eq('id', user.id).single()
     if (!userData) { setConnecting(null); return }
 
-    const { data } = await supabase
-      .from('platform_connections')
-      .upsert({
-        tenant_id:   userData.tenant_id,
-        platform:    platformId,
-        marketplace: manualMarket || null,
-        is_active:   true,
-      }, { onConflict: 'tenant_id,platform,marketplace' })
-      .select()
+    setError(null)
+    const existing = connections.find(c => c.platform === platformId && c.marketplace === (manualMarket || null))
+    const write = existing
+      ? supabase.from('platform_connections').update({ is_active: true }).eq('id', existing.id)
+      : supabase.from('platform_connections').insert({ tenant_id: userData.tenant_id, platform: platformId, marketplace: manualMarket || null, is_active: true })
+    const { data, error } = await write.select('id,platform,marketplace,shop_name,is_active,connected_at')
+    if (error || !data?.length) { setError('Unable to save configuration. Check your account permissions.'); setConnecting(null); return }
 
     if (data?.[0]) {
       setConnections(prev => {
@@ -126,14 +127,14 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-5 max-w-3xl">
+      {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       {/* Info banner */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-5 py-3.5 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-blue-300 text-sm font-medium">About integrations</p>
           <p className="text-blue-400/80 text-xs mt-0.5">
-            Connecting a platform allows AmazinReview to verify customer order IDs automatically.
-            Without a connection, order verification still works — customers just need a valid order ID format.
+            These settings record your sales platforms. Orders currently require seller review; saving a platform does not enable automatic purchase verification.
           </p>
         </div>
       </div>

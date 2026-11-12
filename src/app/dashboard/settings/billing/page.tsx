@@ -12,6 +12,8 @@ const PLAN_FEATURES: Record<string, string[]> = {
   agency:  ['Unlimited products', 'Unlimited campaigns', 'Unlimited promotions', 'Everything in Pro', 'White-label', 'Custom domain'],
 }
 
+function trialDays(ends: string | null) { return ends ? Math.max(0, Math.ceil((new Date(ends).getTime() - Date.now()) / 86400000)) : 0 }
+
 export default async function BillingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -28,9 +30,7 @@ export default async function BillingPage() {
   const currentPlan = tenant?.plan ?? 'starter'
   const planStatus  = tenant?.plan_status ?? 'trialing'
   const isTrialing  = planStatus === 'trialing'
-  const trialDaysLeft = tenant?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at).getTime() - Date.now()) / 86400000))
-    : 0
+  const trialDaysLeft = trialDays(tenant?.trial_ends_at)
 
   // Get invoices
   const { data: invoices } = await supabase
@@ -39,13 +39,6 @@ export default async function BillingPage() {
     .eq('tenant_id', userData.tenant_id)
     .order('created_at', { ascending: false })
     .limit(5)
-
-  // Create Stripe checkout session helper
-  const createCheckoutUrl = async (priceId: string) => {
-    'use server'
-    // This would be handled by a dedicated API route in production
-    return `/api/billing/checkout?price=${priceId}`
-  }
 
   const plans = [
     { id: 'starter', name: 'Starter',  monthly: 1900, annual: 1400 },

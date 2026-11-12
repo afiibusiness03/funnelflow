@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import NextLink from 'next/link'
 import { QrCode, Check, ArrowRight, Zap, Shield, BarChart3, LogOut, Loader2 } from 'lucide-react'
 
@@ -14,8 +15,8 @@ const PLANS = [
     desc:      'For sellers just getting started',
     highlight: false,
     features: [
-      '5 campaigns',
-      '5 promotions',
+      '1 campaign',
+      '1 promotion',
       '1 product',
       'All platforms',
       'Email delivery',
@@ -32,7 +33,7 @@ const PLANS = [
     badge:     'Most Popular',
     features: [
       'Unlimited campaigns',
-      'Unlimited promotions',
+      '5 promotions',
       'Up to 10 products',
       'All platforms',
       'Smart routing',
@@ -50,7 +51,7 @@ const PLANS = [
     highlight: false,
     features: [
       'Everything in Growth',
-      'Unlimited products',
+      'Up to 50 products',
       'White-label funnels',
       'API access',
       'Multi-user accounts',
@@ -59,25 +60,18 @@ const PLANS = [
   },
 ]
 
-export default function PricingPage() {
+function PricingContent() {
+  const query = useSearchParams()
   const [interval, setInterval] = useState<'monthly' | 'annual'>('annual')
-  const [isExpired, setIsExpired] = useState(false)
-  const [hasError, setHasError] = useState(false)
+  const [accountExpired, setIsExpired] = useState(false)
+  const isExpired = accountExpired || query.get('expired') === 'true'
+  const hasError = query.get('error') === 'checkout_failed'
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const annualSavings = interval === 'annual'
 
   useEffect(() => {
-    // Parse params manually to avoid NextJS Suspense de-optimization warnings
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('expired') === 'true') {
-      setIsExpired(true)
-    }
-    if (params.get('error') === 'checkout_failed') {
-      setHasError(true)
-    }
-
     const checkUserStatus = async () => {
       try {
         const { createClient } = await import('@/lib/supabase/client')
@@ -287,7 +281,7 @@ export default function PricingPage() {
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             {[
               { icon: Shield,    title: 'Your data is safe',  desc: 'We never delete your data. Upgrade anytime to regain access.' },
-              { icon: Zap,       title: 'Instant activation', desc: 'Your account unlocks immediately after payment.' },
+              { icon: Zap,       title: 'Payment confirmation', desc: 'Your plan updates after your payment is confirmed.' },
               { icon: BarChart3, title: 'No hidden fees',     desc: 'What you see is what you pay. Cancel anytime.' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
@@ -312,3 +306,5 @@ export default function PricingPage() {
     </div>
   )
 }
+
+export default function PricingPage() { return <Suspense fallback={<div className="min-h-screen bg-slate-950" />}><PricingContent /></Suspense> }

@@ -5,28 +5,36 @@ import { CheckCircle, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/helpers'
 
 interface ClaimActionsProps {
+  promotionType?: string
   claimId:   string
   status:    string
   isFlagged: boolean
   onSuccess: () => void
 }
 
-export default function ClaimActions({ claimId, status, isFlagged, onSuccess }: ClaimActionsProps) {
+export default function ClaimActions({ claimId, status, isFlagged, promotionType, onSuccess }: ClaimActionsProps) {
   const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const manual = !['coupon_code', 'digital_download'].includes(promotionType ?? '')
   const [done, setDone]       = useState(false)
 
   const doAction = async (action: 'approve' | 'reject' | 'deliver') => {
+    if (action === 'deliver' && manual && !window.confirm('Confirm that you have fulfilled this reward outside the app. This marks the claim as delivered.')) return
+    setError(null)
     setLoading(action)
     try {
       const res = await fetch(`/api/claims/${claimId}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: action === 'reject' ? JSON.stringify({ reason: 'Rejected by seller' }) : '{}',
+        body: action === 'reject' ? JSON.stringify({ reason: 'Rejected by seller' }) : JSON.stringify({ manualFulfilled: action === 'deliver' && manual }),
       })
+      if (!res.ok) { const result = await res.json(); throw new Error(result.error ?? 'Action failed') }
       if (res.ok) {
         setDone(true)
         setTimeout(() => { setDone(false); onSuccess() }, 800)
       }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to save. Please retry.')
     } finally {
       setLoading(null)
     }
@@ -37,7 +45,8 @@ export default function ClaimActions({ claimId, status, isFlagged, onSuccess }: 
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
+      {error && <p role="alert" className="w-full text-xs text-red-400">{error}</p>}
       {/* Pending → Approve or Reject */}
       {status === 'pending' && !isFlagged && (
         <>
@@ -86,7 +95,7 @@ export default function ClaimActions({ claimId, status, isFlagged, onSuccess }: 
             ? <Loader2 className="w-3 h-3 animate-spin" />
             : <RefreshCw className="w-3 h-3" />
           }
-          <span className="hidden sm:inline">Deliver</span>
+          <span className="hidden sm:inline">{manual ? 'Mark fulfilled' : 'Deliver'}</span>
         </button>
       )}
 

@@ -1,67 +1,19 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { generateSlug } from '@/lib/utils/helpers'
-
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
+import { apiError, HttpError, readJson } from '@/lib/security/http'
+import { rateLimit } from '@/lib/security/rate-limit'
 export async function POST(request: Request) {
   try {
-    const { name, userId, email, fullName } = await request.json()
-
-    if (!name || !userId || !email) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const clientSupabase = await createClient()
-    const { data: { user } } = await clientSupabase.auth.getUser()
-    if (!user || user.id !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const supabase = createServiceClient()
-
-    // 1. Create tenant with 14-day free trial
-    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .insert({
-        name,
-        slug:           generateSlug(name),
-        email,
-        plan:           'starter',
-        plan_status:    'trialing',
-        trial_ends_at:  trialEndsAt,  // expires in 14 days
-        max_campaigns:  2,            // free trial limit
-        max_promotions: 2,            // free trial limit
-      })
-      .select()
-      .single()
-
-    if (tenantError) {
-      console.error('Tenant creation error:', tenantError)
-      return NextResponse.json({ error: 'Failed to create tenant' }, { status: 500 })
-    }
-
-    // 2. Create user record linked to tenant
-    const { error: userError } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        tenant_id: tenant.id,
-        email,
-        full_name: fullName,
-        role: 'owner',
-      })
-
-    if (userError) {
-      console.error('User creation error:', userError)
-      // Rollback tenant
-      await supabase.from('tenants').delete().eq('id', tenant.id)
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
-    }
-
-    return NextResponse.json({ tenant }, { status: 201 })
-  } catch (error) {
-    console.error('Register API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+    const body=await readJson(request,z.object({name:z.string().trim().min(2).max(200),fullName:z.string().trim().max(200).default('')}))
+    const db=await createClient()
+    const {data:{user}}=await db.auth.getUser()
+    if(!user)throw new HttpError(401,'Confirm your email and sign in first')
+    const {data:existing}=await db.from('users').select('tenant_id').eq('id',user.id).single()
+    if(existing)return NextResponse.json({tenant:{id:existing.tenant_id}})
+    await rateLimit(request,'registration',5,3600)
+    const {data,error}=await db.rpc('create_tenant_account',{p_name:body.name,p_full_name:body.fullName})
+    if(error)throw new HttpError(403,'Account creation is unavailable. Contact support if you have an invitation.')
+    return NextResponse.json({tenant:{id:data}},{status:201})
+  }catch(error){return apiError(error)}
 }

@@ -1,3 +1,5 @@
+import { getAccount } from '@/lib/security/access'
+import { getMetrics, dailyChart } from '@/lib/analytics/metrics'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { conversionRate } from '@/lib/utils/helpers'
@@ -7,36 +9,21 @@ import { QrCode, TrendingUp, Star, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export default async function CampaignAnalyticsPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
+export default async function CampaignAnalyticsPage({ params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = await routeParams
+  const {supabase,profile}=await getAccount()
   const { data: campaign } = await supabase
     .from('campaigns')
     .select('*, product:products!campaigns_product_id_fkey(*)')
     .eq('id', params.id)
+    .eq('tenant_id',profile.tenant_id)
     .single()
 
   if (!campaign) notFound()
 
-  const { data: ratingRows } = await supabase
-    .from('funnel_submissions')
-    .select('rating')
-    .eq('campaign_id', params.id)
-    .not('rating', 'is', null)
-
-  const ratingDist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  ratingRows?.forEach((r) => { if (r.rating) ratingDist[r.rating] = (ratingDist[r.rating] ?? 0) + 1 })
-
-  const scansData = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(Date.now() - (13 - i) * 86400000)
-    return {
-      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      scans: 0,
-      completions: 0,
-    }
-  })
+  const metrics=await getMetrics(params.id)
+  const ratingDist={1:0,2:0,3:0,4:0,5:0,...metrics.ratings}
+  const scansData=dailyChart(metrics)
 
   const funnelData = [
     { step: 'QR Scanned',       count: campaign.total_scans,       rate: 100 },

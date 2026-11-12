@@ -14,13 +14,11 @@ export function formatCurrency(cents: number, currency = 'USD'): string {
   }).format(cents / 100)
 }
 
+const displayDate = new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' })
+
 // Format date
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(date))
+  return displayDate.format(new Date(date))
 }
 
 // Generate a random slug

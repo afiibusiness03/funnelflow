@@ -1,6 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -20,7 +19,7 @@ export default function FunnelPage() {
 
   // Load campaign
   useEffect(() => {
-    fetch(`/api/funnel/${code}`)
+    fetch(`/api/funnel/${encodeURIComponent(code)}`)
       .then(r => r.json())
       .then(({ data, error: err }) => {
         if (err || !data) { setError('This offer is no longer available.'); return }
@@ -29,7 +28,7 @@ export default function FunnelPage() {
         fetch('/api/funnel/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaignId: data.id, eventType: 'qr_scan', stepNumber: 0 }),
+          body: JSON.stringify({ campaignId: data.id, eventToken: data.eventToken, eventType: 'qr_scan', stepNumber: 0 }),
         })
       })
       .catch(() => setError('Something went wrong. Please try again.'))

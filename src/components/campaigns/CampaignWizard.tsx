@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
@@ -150,11 +150,11 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     trigger,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm<z.input<typeof schema>, unknown, FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       require_order_verify: false,
@@ -172,10 +172,10 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [productWizardError, setProductWizardError] = useState<string | null>(null)
 
-  const selectedProductId   = watch('product_id') || selectedProductIds[0]
-  const selectedPromotionId = watch('promotion_id')
-  const smartRouting        = watch('smart_routing')
-  const threshold           = watch('smart_routing_threshold')
+  const selectedProductId   = useWatch({ control, name: 'product_id' }) || selectedProductIds[0]
+  const selectedPromotionId = useWatch({ control, name: 'promotion_id' })
+  const smartRouting        = useWatch({ control, name: 'smart_routing' })
+  const threshold           = useWatch({ control, name: 'smart_routing_threshold' })
 
   const selectedProduct   = localProducts.find(p => p.id === selectedProductId)
   const selectedPromotion = localPromotions.find(p => p.id === selectedPromotionId)
@@ -327,7 +327,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                       </span>
                     </div>
                     <p className="text-slate-400 text-xs mt-0.5">
-                      Only selected products will appear in this campaign's customer funnel.
+                      Only selected products will appear in this campaign&apos;s customer funnel.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -618,7 +618,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                     <span className="text-slate-400 text-sm">Smart routing</span>
                   </div>
                   <span className="text-white text-sm font-medium">
-                    {watch('smart_routing') ? `Ask if rating ≥ ${threshold}★` : 'Disabled'}
+                    {smartRouting ? `Ask if rating ≥ ${threshold}★` : 'Disabled'}
                   </span>
                 </div>
               </div>
@@ -718,7 +718,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">Amazon Direct Review Link <span className="text-purple-400 font-normal">(recommended)</span></label>
-                <p className="text-slate-400 text-[11px] mb-1">Directs happy buyers straight to this product's Amazon review page.</p>
+                <p className="text-slate-400 text-[11px] mb-1">Directs happy buyers straight to this product&apos;s Amazon review page.</p>
                 <input
                   type="url"
                   placeholder="https://www.amazon.com/review/create-review?asin=..."
@@ -912,7 +912,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 if (filtered.length === 0) {
                   return (
                     <div className="py-6 text-center text-slate-400 text-xs font-medium">
-                      No matching unadded products found for "{modalSearchQuery}".
+                      No matching unadded products found for &quot;{modalSearchQuery}&quot;.
                     </div>
                   )
                 }

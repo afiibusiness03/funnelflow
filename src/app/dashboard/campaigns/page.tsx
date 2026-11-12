@@ -1,24 +1,21 @@
+import { getAccount } from '@/lib/security/access'
+import Pagination from '@/components/dashboard/Pagination'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { QrCode, Plus } from 'lucide-react'
 import CampaignCard from '@/components/campaigns/CampaignCard'
 
-export default async function CampaignsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) redirect('/login')
-
-  const { data: campaigns } = await supabase
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const {supabase,profile:userData}=await getAccount()
+  const requestedPage = Number((await searchParams).page ?? 1)
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10000) : 1
+  const { data: campaigns, count } = await supabase
     .from('campaigns')
-    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*)')
+    .select('*, product:products!campaigns_product_id_fkey(*), promotion:promotions(*)', { count: 'exact' })
     .eq('tenant_id', userData.tenant_id)
     .neq('status', 'archived')
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }).range((page - 1) * 50, page * 50 - 1)
 
   return (
     <div className="space-y-6">
@@ -56,6 +53,7 @@ export default async function CampaignsPage() {
           </Link>
         </div>
       )}
+      <Pagination page={page} total={count ?? 0} pageSize={50} path="/dashboard/campaigns" />
     </div>
   )
 }

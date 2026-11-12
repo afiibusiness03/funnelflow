@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils/helpers'
 import { Loader2, QrCode, Eye, EyeOff, CheckCircle } from 'lucide-react'
 
 const schema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters').regex(/[A-Z]/, 'Include an uppercase letter').regex(/[0-9]/, 'Include a number'),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getPublicSiteSettings } from '@/lib/site-settings'
 import { createClient } from '@/lib/supabase/server'
 import { 
   QrCode, ArrowRight, Zap, Check, Star, 
@@ -15,9 +16,9 @@ const DEFAULTS = {
   step2_title: 'Generate & Print QR Codes',
   step2_desc: 'Get custom, scan-ready QR codes for packaging inserts or thank-you cards.',
   step3_title: 'Customer Scans & Verifies',
-  step3_desc: 'Customers scan the code, enter their order ID (verified via SP-API), and leave feedback.',
+  step3_desc: 'Customers scan the code, enter their order details for seller review, and leave feedback.',
   step4_title: 'Auto-Deliver Rewards',
-  step4_desc: 'Verified submissions instantly receive rewards via email, while high-rating users are prompted to review.',
+  step4_desc: 'Approve claims and email eligible rewards, or confirm manual fulfillment from your dashboard.',
   features_json: [
     { title: 'Multi-Platform Support', desc: 'Native validation rules for Amazon, Shopify, eBay, Walmart, and Etsy.' },
     { title: 'Fraud Detection', desc: 'Blocks temp mails, duplicate order IDs, and duplicate IP submissions.' },
@@ -32,18 +33,14 @@ export default async function MarketingLandingPage() {
   // Get active session dynamically to update header controls
   const { data: { user } } = await supabase.auth.getUser()
   const userEmail = user?.email ?? ''
-  const isAdmin = userEmail === 'omaromran2091@gmail.com' || userEmail === 'afiibusiness03@gmail.com'
+  const isAdmin = user?.app_metadata?.platform_admin === true
 
   // Load customizable content from site_settings (falls back to DEFAULTS if empty)
   let settings = DEFAULTS
   let publicLandingEnabled = true
 
   try {
-    const { data: siteDb } = await supabase
-      .from('site_settings')
-      .select('*')
-      .eq('id', '00000000-0000-0000-0000-000000000000')
-      .single()
+    const siteDb = await getPublicSiteSettings()
 
     if (siteDb) {
       if (typeof siteDb.public_landing_enabled === 'boolean') {

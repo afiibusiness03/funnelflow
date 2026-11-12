@@ -30,6 +30,7 @@ async function getAccessToken(): Promise<string> {
 
   const res = await fetch('https://api.amazon.com/auth/o2/token', {
     method: 'POST',
+    signal: AbortSignal.timeout(8000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type:    'refresh_token',
@@ -59,15 +60,15 @@ export async function verifyAmazonOrderId(
   const amazonOrderRegex = /^\d{3}-\d{7}-\d{7}$/
   if (!amazonOrderRegex.test(orderId)) return false
 
-  // If SP-API credentials are not configured, accept valid-format orders
+  // Missing credentials must never be treated as purchase verification.
   const hasSpApi =
     process.env.AMAZON_CLIENT_ID &&
     process.env.AMAZON_CLIENT_SECRET &&
     process.env.AMAZON_REFRESH_TOKEN
 
   if (!hasSpApi) {
-    // No credentials → accept the order (seller manually reviews in Claims Center)
-    return true
+    // Require manual seller review.
+    return false
   }
 
   try {
@@ -77,6 +78,7 @@ export async function verifyAmazonOrderId(
     const res = await fetch(
       `${endpoint}/orders/v0/orders/${orderId}`,
       {
+        signal: AbortSignal.timeout(8000),
         headers: {
           'x-amz-access-token': token,
           'Content-Type':       'application/json',
@@ -94,7 +96,7 @@ export async function verifyAmazonOrderId(
     return validStatuses.includes(status)
   } catch (error) {
     console.error('Amazon SP-API error:', error)
-    // Fail open — don't block legitimate customers if API is temporarily down
-    return true
+    // Verification failures require manual review.
+    return false
   }
 }

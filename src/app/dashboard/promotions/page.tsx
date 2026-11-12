@@ -1,3 +1,5 @@
+import { getAccount } from '@/lib/security/access'
+import Pagination from '@/components/dashboard/Pagination'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -5,23 +7,16 @@ import { Gift, Plus } from 'lucide-react'
 import PromotionList from '@/components/promotions/PromotionList'
 
 
-export default async function PromotionsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id, tenant:tenants(max_promotions)')
-    .eq('id', user.id).single()
-  if (!userData) redirect('/login')
-
+export default async function PromotionsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const {supabase,profile:userData}=await getAccount()
+  const requestedPage = Number((await searchParams).page ?? 1)
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10000) : 1
   const { data: promotions, count } = await supabase
     .from('promotions')
     .select('*', { count: 'exact' })
     .eq('tenant_id', userData.tenant_id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }).range((page - 1) * 50, page * 50 - 1)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenant = (userData.tenant as unknown) as { max_promotions: number } | null
   const maxPromos = tenant?.max_promotions ?? 1
   const atLimit = (count ?? 0) >= maxPromos
@@ -72,6 +67,7 @@ export default async function PromotionsPage() {
           )}
         </div>
       )}
+      <Pagination page={page} total={count ?? 0} pageSize={50} path="/dashboard/promotions" />
     </div>
   )
 }

@@ -1,25 +1,18 @@
+import { requireAccount } from '@/lib/security/access'
+import { checkOrigin, apiError, HttpError } from '@/lib/security/http'
+import { rateLimit } from '@/lib/security/rate-limit'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 
-export async function GET(request: Request) {
-  const { origin } = new URL(request.url)
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.redirect(new URL('/login', request.url))
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('tenant:tenants(stripe_customer_id)')
-    .eq('id', user.id).single()
-
-  const customerId = (userData?.tenant as any)?.stripe_customer_id
-  if (!customerId) return NextResponse.redirect(new URL('/dashboard/settings/billing', request.url))
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer:   customerId,
-    return_url: `${origin}/dashboard/settings/billing`,
-  })
-
-  return NextResponse.redirect(session.url)
+export async function POST(request: Request) {
+  try {
+    checkOrigin(request)
+    const { tenant } = await requireAccount({ write: true, billing: true })
+    if (!tenant.stripe_customer_id) throw new HttpError(409, 'No billing account yet')
+    await rateLimit(request, 'billing-portal', 10)
+    const session = await stripe.billingPortal.sessions.create({ customer: tenant.stripe_customer_id,
+      return_url: `${new URL(request.url).origin}/pricing` })
+    return NextResponse.redirect(session.url, 303)
+  } catch (error) { return apiError(error) }
 }
+export async function GET(request: Request) { return NextResponse.redirect(new URL('/billing/confirm?portal=1', request.url)) }

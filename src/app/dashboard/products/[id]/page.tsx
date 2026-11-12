@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -20,7 +20,8 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage({ params: routeParams }: { params: Promise<{ id: string }> }) {
+  const params = use(routeParams)
   const router = useRouter()
   const [loading, setLoading]       = useState(true)
   const [serverError, setServerError] = useState<string | null>(null)

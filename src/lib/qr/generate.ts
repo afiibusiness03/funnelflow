@@ -9,7 +9,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://amazinreview.com'
 
 // Generate QR as SVG string (for storing / displaying)
 export async function generateQRSvg({ shortCode, color = '#000000' }: QROptions): Promise<string> {
-  const url = `${APP_URL}/f/${shortCode}`
+  const url = `${APP_URL}/f/${encodeURIComponent(shortCode)}`
 
   const svg = await QRCode.toString(url, {
     type: 'svg',
@@ -27,7 +27,7 @@ export async function generateQRSvg({ shortCode, color = '#000000' }: QROptions)
 
 // Generate QR as PNG Buffer (for download)
 export async function generateQRPng({ shortCode, color = '#000000' }: QROptions): Promise<Buffer> {
-  const url = `${APP_URL}/f/${shortCode}`
+  const url = `${APP_URL}/f/${encodeURIComponent(shortCode)}`
 
   const buffer = await QRCode.toBuffer(url, {
     type: 'png',
@@ -45,5 +45,5 @@ export async function generateQRPng({ shortCode, color = '#000000' }: QROptions)
 
 // Get the funnel URL for a short code
 export function getFunnelUrl(shortCode: string): string {
-  return `${APP_URL}/f/${shortCode}`
+  return `${APP_URL}/f/${encodeURIComponent(shortCode)}`
 }

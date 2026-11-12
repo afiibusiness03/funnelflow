@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
 import { Bell, Plus, Search, Sun, Moon } from 'lucide-react'
 
 const PAGE_TITLES: Record<string, { title: string; description: string; action?: { label: string; href: string } }> = {
@@ -30,26 +30,24 @@ interface HeaderProps {
   notifications?: number
 }
 
+function themeSnapshot() { return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light' }
+function subscribeTheme(callback: () => void) {
+  const sync = () => { document.documentElement.classList.toggle('light', themeSnapshot() === 'light'); callback() }
+  sync()
+  window.addEventListener('storage', sync)
+  window.addEventListener('theme-change', sync)
+  return () => { window.removeEventListener('storage', sync); window.removeEventListener('theme-change', sync) }
+}
+
 export default function Header({ notifications = 0 }: HeaderProps) {
   const pathname = usePathname()
   const meta = getPageMeta(pathname)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null
-    const initial = stored || 'light'
-    setTheme(initial)
-    if (initial === 'light') {
-      document.documentElement.classList.add('light')
-    } else {
-      document.documentElement.classList.remove('light')
-    }
-  }, [])
+  const theme = useSyncExternalStore(subscribeTheme, themeSnapshot, () => 'light')
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
-    setTheme(next)
     localStorage.setItem('theme', next)
+    window.dispatchEvent(new Event('theme-change'))
     if (next === 'light') {
       document.documentElement.classList.add('light')
     } else {

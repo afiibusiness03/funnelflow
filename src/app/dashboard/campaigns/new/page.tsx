@@ -1,3 +1,4 @@
+import { getAccount } from '@/lib/security/access'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -5,13 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import CampaignWizard from '@/components/campaigns/CampaignWizard'
 
 export default async function NewCampaignPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users').select('tenant_id').eq('id', user.id).single()
-  if (!userData) redirect('/login')
+  const {supabase,profile:userData}=await getAccount()
 
   const [{ data: products }, { data: promotions }] = await Promise.all([
     supabase.from('products').select('*').eq('tenant_id', userData.tenant_id).eq('is_active', true),

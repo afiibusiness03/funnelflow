@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import ClaimsTable, { type ClaimRow } from '@/components/claims/ClaimsTable'
 import { Inbox, Clock, CheckCircle, Truck, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/helpers'
@@ -14,6 +14,7 @@ const FILTERS = [
 ]
 
 export default function ClaimsPage() {
+  const [error, setError] = useState<string | null>(null)
   const [claims, setClaims]     = useState<ClaimRow[]>([])
   const [loading, setLoading]   = useState(true)
   const [status, setStatus]     = useState('')
@@ -21,40 +22,33 @@ export default function ClaimsPage() {
   const [totalPages, setTotal]  = useState(1)
   const [counts, setCounts]     = useState<Record<string, number>>({})
 
-  const fetchClaims = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({ page: String(page), per_page: '20' })
-      if (status) params.set('status', status)
-
-      const res  = await fetch(`/api/claims?${params}`)
-      const json = await res.json()
-      setClaims(json.data ?? [])
-      setTotal(json.total_pages ?? 1)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, status])
-
-  // Fetch counts for each tab
-  const fetchCounts = useCallback(async () => {
-    const results = await Promise.all(
-      ['pending','approved','delivered','rejected'].map(async (s) => {
-        const res  = await fetch(`/api/claims?status=${s}&per_page=1`)
-        const json = await res.json()
-        return [s, json.count ?? 0] as [string, number]
+  const [refresh, setRefresh] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    const params = new URLSearchParams({ page: String(page), per_page: '20' })
+    if (status) params.set('status', status)
+    fetch(`/api/claims?${params}`, { signal: controller.signal })
+      .then(async response => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error ?? 'Unable to load claims')
+        return result
       })
-    )
-    setCounts(Object.fromEntries(results))
-  }, [])
-
-  useEffect(() => { fetchClaims() }, [fetchClaims])
-  useEffect(() => { fetchCounts() }, [fetchCounts])
-
-  const handleRefresh = () => { fetchClaims(); fetchCounts() }
+      .then(result => {
+        if (controller.signal.aborted) return
+        setError(null)
+        setCounts(result.counts ?? {})
+        setClaims(result.data ?? [])
+        setTotal(result.total_pages ?? 1)
+      })
+      .catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'Unable to load claims') })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [page, status, refresh])
+  const handleRefresh = () => { setLoading(true); setRefresh(value => value + 1) }
 
   return (
     <div className="space-y-5">
+      {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-slate-800/50 border border-slate-700/50 rounded-xl p-1 w-fit">
         {FILTERS.map((f) => {
@@ -64,7 +58,7 @@ export default function ClaimsPage() {
           return (
             <button
               key={f.value}
-              onClick={() => { setStatus(f.value); setPage(1) }}
+              onClick={() => { setLoading(true); setStatus(f.value); setPage(1) }}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition',
                 active

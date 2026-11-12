@@ -1,19 +1,14 @@
+import { requireAccount } from '@/lib/security/access'
+import { apiError, checkOrigin, readJson } from '@/lib/security/http'
+import { productSchema } from '@/lib/security/schemas'
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // GET /api/products — list all products for current tenant
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  let account
+  try { account = await requireAccount({ write: false }) } catch (error) { return apiError(error) }
+  const { supabase, profile: userData } = account
 
   const { data: products, error } = await supabase
     .from('products')
@@ -21,34 +16,26 @@ export async function GET() {
     .eq('tenant_id', userData.tenant_id)
     .order('created_at', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: 'Unable to save this change' }, { status: 500 })
   return NextResponse.json({ data: products })
 }
 
 // POST /api/products — create a new product
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  let account
+  try { account = await requireAccount({ write: true }); checkOrigin(request) } catch (error) { return apiError(error) }
+  const { supabase, profile: userData } = account
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('tenant_id, tenant:tenants(max_products)')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData) return NextResponse.json({ error: 'User not found' }, { status: 404 })
-
-  const body = await request.json()
+  let body
+  try { body = await readJson(request, productSchema) } catch (error) { return apiError(error) }
   const { name, platform, marketplace, asin, sku, product_url, review_url, image_url } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Product name is required' }, { status: 400 })
   }
 
-  // Service role insert to guarantee bypass of RLS issues
-  const serviceClient = createServiceClient()
-  const { data: product, error } = await serviceClient
+  // Database policies and quota triggers enforce the same rules for every caller.
+  const { data: product, error } = await supabase
     .from('products')
     .insert({
       tenant_id:   userData.tenant_id,
@@ -66,7 +53,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !product) {
-    return NextResponse.json({ error: error?.message ?? 'Failed to create product' }, { status: 500 })
+    return NextResponse.json({ error: 'Unable to create product. Check your plan limit and product details.' }, { status: 409 })
   }
 
   return NextResponse.json({ data: product }, { status: 201 })

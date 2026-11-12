@@ -17,8 +17,9 @@ const isProtectedRoute = (pathname: string) =>
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Always allow public funnel routes (customers scanning QR codes)
-  if (isFunnelRoute(pathname)) return NextResponse.next()
+  // APIs enforce their own authentication and refresh cookies in the route handler.
+  // Avoid a redundant auth request (and middleware work) before every API call.
+  if (isFunnelRoute(pathname) || isApiRoute(pathname) || pathname === '/') return NextResponse.next()
 
   // Always allow open routes (pricing, trial-expired) — no redirect needed
   if (isOpenRoute(pathname)) return NextResponse.next()

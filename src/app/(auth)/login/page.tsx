@@ -31,13 +31,17 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormData) => {
     setServerError(null)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: signedIn, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     })
     if (error) {
       setServerError(error.message)
       return
+    }
+    if (signedIn.user) {
+      const res=await fetch('/api/tenants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:String(signedIn.user.user_metadata.business_name || 'My business').slice(0,200),fullName:String(signedIn.user.user_metadata.full_name || '').slice(0,200)})})
+      if(!res.ok){setServerError('Your account is not ready. Please contact support.');return}
     }
     router.push('/dashboard')
     router.refresh()

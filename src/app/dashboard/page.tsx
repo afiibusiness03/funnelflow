@@ -1,3 +1,5 @@
+import { getAccount } from '@/lib/security/access'
+import { getMetrics, dailyChart } from '@/lib/analytics/metrics'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StatsCard from '@/components/dashboard/StatsCard'
@@ -6,76 +8,27 @@ import { QrCode, Mail, Star, Inbox, TrendingUp, Package, ArrowRight } from 'luci
 import Link from 'next/link'
 import { conversionRate, formatDate } from '@/lib/utils/helpers'
 
+function trialDays(ends: string | null) { return ends ? Math.max(0, Math.ceil((new Date(ends).getTime() - Date.now()) / 86400000)) : 0 }
+
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('tenant_id, tenant:tenants(name, plan, plan_status, trial_ends_at)')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData) redirect('/login')
-  const tenantId = userData.tenant_id
-
-  // ── Fetch Stats ────────────────────────────────────────────────
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-
-  const [
-    { count: totalScans },
-    { count: totalCompletions },
-    { count: totalEmails },
-    { count: pendingClaims },
-    { count: activeCampaigns },
-    { data: recentSubmissions },
-    { data: ratingRows },
-  ] = await Promise.all([
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'qr_scan').gte('created_at', thirtyDaysAgo),
-    supabase.from('funnel_events').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('event_type', 'funnel_complete').gte('created_at', thirtyDaysAgo),
-    supabase.from('funnel_submissions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
-    supabase.from('funnel_submissions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('claim_status', 'pending'),
-    supabase.from('campaigns').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId).eq('status', 'active'),
-    supabase.from('funnel_submissions')
-      .select('id, customer_email, rating, claim_status, created_at, campaign:campaigns(name)')
-      .eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(5),
-    supabase.from('funnel_submissions')
-      .select('rating').eq('tenant_id', tenantId).not('rating', 'is', null),
+  const {supabase,profile:userData}=await getAccount()
+  const tenantId=userData.tenant_id
+  const [metrics,{count:activeCampaigns},{data:recentSubmissions}]=await Promise.all([
+    getMetrics(),
+    supabase.from('campaigns').select('*',{count:'exact',head:true}).eq('tenant_id',tenantId).eq('status','active'),
+    supabase.from('funnel_submissions').select('id,customer_email,rating,claim_status,created_at,campaign:campaigns(name)').eq('tenant_id',tenantId).order('created_at',{ascending:false}).limit(5),
   ])
-
-  // Build rating distribution
-  const ratingDist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-  ratingRows?.forEach((r) => { if (r.rating) ratingDist[r.rating] = (ratingDist[r.rating] ?? 0) + 1 })
-
-  // Build scans-over-time (last 14 days — placeholder, real impl uses funnel_events group by)
-  const scansData = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(Date.now() - (13 - i) * 86400000)
-    return {
-      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      scans: Math.floor(Math.random() * 30),        // replace with real query
-      completions: Math.floor(Math.random() * 15),
-    }
-  })
-
-  // Funnel drop-off data
-  const funnelData = [
-    { step: 'QR Scanned',        count: totalScans ?? 0,       rate: 100 },
-    { step: 'Order Verified',     count: Math.floor((totalScans ?? 0) * 0.72), rate: 72 },
-    { step: 'Feedback Submitted', count: Math.floor((totalScans ?? 0) * 0.58), rate: 58 },
-    { step: 'Funnel Completed',   count: totalCompletions ?? 0, rate: conversionRate(totalCompletions ?? 0, totalScans ?? 1) },
+  const totalScans=metrics.scans30,totalCompletions=metrics.completions30,totalEmails=metrics.totalEmails,pendingClaims=metrics.statuses.pending ?? 0
+  const ratingDist={1:0,2:0,3:0,4:0,5:0,...metrics.ratings}
+  const scansData=dailyChart(metrics)
+  const funnelData=[
+    {step:'QR Scanned',count:totalScans,rate:100},
+    {step:'Claims Submitted',count:totalCompletions,rate:conversionRate(totalCompletions,totalScans)},
   ]
 
   const tenant = userData.tenant as any
   const isTrialing = tenant?.plan_status === 'trialing'
-  const trialDaysLeft = tenant?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at).getTime() - Date.now()) / 86400000))
-    : 0
+  const trialDaysLeft = trialDays(tenant?.trial_ends_at)
 
   return (
     <div className="space-y-6">

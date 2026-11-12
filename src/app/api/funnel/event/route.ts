@@ -1,39 +1,21 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
-
-// Track funnel events (scans, step completions, drop-offs)
+import { apiError, HttpError, readJson, uuid } from '@/lib/security/http'
+import { verifyEventToken } from '@/lib/security/event-token'
+import { rateLimit } from '@/lib/security/rate-limit'
+const schema = z.object({ campaignId: uuid, eventToken: z.string().max(1024), eventType: z.enum(['qr_scan','review_shown','review_clicked','review_skipped','funnel_abandoned']) })
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { campaignId, eventType, stepNumber, submissionId, metadata } = body
-
-    if (!campaignId || !eventType) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const supabase = createServiceClient()
-
-    // Get tenant_id from campaign
-    const { data: campaign } = await supabase
-      .from('campaigns')
-      .select('tenant_id')
-      .eq('id', campaignId)
-      .single()
-
-    if (!campaign) return NextResponse.json({ ok: true }) // Fail silently
-
-    await supabase.from('funnel_events').insert({
-      campaign_id:   campaignId,
-      tenant_id:     campaign.tenant_id,
-      submission_id: submissionId ?? null,
-      event_type:    eventType,
-      step_number:   stepNumber ?? null,
-      metadata:      metadata ?? null,
-      ip_address:    request.headers.get('x-forwarded-for') ?? null,
-    })
-
+    const body = await readJson(request, schema, 2048)
+    const session = verifyEventToken(body.eventToken, body.campaignId)
+    if (!session) throw new HttpError(403, 'Invalid event session')
+    await rateLimit(request, 'funnel-event', 60)
+    const db = createServiceClient()
+    const { data: campaign } = await db.from('campaigns').select('tenant_id').eq('id', body.campaignId).eq('status', 'active').single()
+    if (!campaign) throw new HttpError(404, 'Campaign not found')
+    const { error } = await db.from('funnel_events').insert({ campaign_id: body.campaignId, tenant_id: campaign.tenant_id, event_type: body.eventType, metadata: { session } })
+    if (error && error.code !== '23505') throw error
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ ok: true }) // Always succeed silently
-  }
+  } catch (error) { return apiError(error) }
 }
