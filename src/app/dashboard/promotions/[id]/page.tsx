@@ -98,7 +98,7 @@ export default function EditPromotionPage({ params: routeParams }: { params: Pro
         <ArrowLeft className="w-4 h-4" /> Back to Promotions
       </Link>
 
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
             <Gift className="w-5 h-5 text-purple-400" />
@@ -147,7 +147,7 @@ export default function EditPromotionPage({ params: routeParams }: { params: Pro
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     {discountType === 'percentage' ? 'Discount %' : 'Discount Amount'}
@@ -216,7 +216,7 @@ export default function EditPromotionPage({ params: routeParams }: { params: Pro
 
           {/* Gift card */}
           {promoType === 'gift_card' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Value ($)</label>
                 <input {...register('gift_card_value')} type="number" min="0" step="0.01" placeholder="25.00"
@@ -246,27 +246,27 @@ export default function EditPromotionPage({ params: routeParams }: { params: Pro
 
           {/* Auto deliver + Active */}
           <div className="space-y-3 pt-2 border-t border-slate-700">
-            <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+            <div className="flex items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
               <div>
                 <p className="text-slate-200 text-sm font-medium">Auto-deliver</p>
                 <p className="text-slate-500 text-xs mt-0.5">Send reward automatically after funnel completes</p>
               </div>
               <input type="checkbox" {...register('auto_deliver')} className="sr-only peer" id="auto_deliver" />
-              <label htmlFor="auto_deliver" className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+              <label htmlFor="auto_deliver" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+            <div className="flex items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
               <div>
                 <p className="text-slate-200 text-sm font-medium">Active</p>
                 <p className="text-slate-500 text-xs mt-0.5">Inactive promotions won&apos;t be offered to customers</p>
               </div>
               <input type="checkbox" {...register('is_active')} className="sr-only peer" id="is_active" />
-              <label htmlFor="is_active" className="w-10 h-5 bg-slate-700 peer-checked:bg-green-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+              <label htmlFor="is_active" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-green-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             <Link href="/dashboard/promotions" className="px-4 py-2 text-slate-400 hover:text-white text-sm transition">Cancel</Link>
             <button type="submit" disabled={isSubmitting}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition">

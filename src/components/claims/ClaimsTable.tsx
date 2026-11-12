@@ -67,7 +67,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
           >
             {/* Row */}
             <div
-              className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-slate-800/80 transition"
+              className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 px-4 py-4 sm:flex sm:gap-4 sm:px-5 cursor-pointer hover:bg-slate-800/80 transition"
               onClick={() => setExpandedId(expanded ? null : claim.id)}
             >
               {/* Avatar */}
@@ -92,7 +92,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 mt-0.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                   {claim.rating && (
                     <span className="flex items-center gap-0.5 text-yellow-400 text-xs">
                       <Star className="w-3 h-3 fill-current" />{claim.rating}
@@ -106,13 +106,13 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
               </div>
 
               {/* Status badge */}
-              <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0', config.color)}>
+              <div className={cn('col-span-2 justify-self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0', config.color)}>
                 <Icon className="w-3 h-3" />
                 {config.label}
               </div>
 
               {/* Actions */}
-              <div onClick={(e) => e.stopPropagation()}>
+              <div className="col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
                 <ClaimActions
                   promotionType={claim.promotion?.type}
                   claimId={claim.id}
@@ -121,11 +121,20 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
                   onSuccess={onRefresh}
                 />
               </div>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={`claim-details-${claim.id}`}
+                onClick={(event) => { event.stopPropagation(); setExpandedId(expanded ? null : claim.id) }}
+                className="col-span-2 min-h-11 shrink-0 text-left text-xs font-medium text-purple-400 hover:text-purple-300"
+              >
+                {expanded ? 'Hide details' : 'View details'}
+              </button>
             </div>
 
             {/* Expanded detail */}
             {expanded && (
-              <div className="px-5 pb-5 pt-0 border-t border-slate-700/50 space-y-3">
+              <div id={`claim-details-${claim.id}`} className="px-5 pb-5 pt-0 border-t border-slate-700/50 space-y-3">
               {claim.shipping_address && <p className="text-sm text-slate-300 break-words">Shipping: {Object.values(claim.shipping_address).filter(Boolean).join(', ')}</p>}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                   {[
@@ -136,7 +145,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
                   ].map((item) => (
                     <div key={item.label}>
                       <p className="text-slate-500 text-xs">{item.label}</p>
-                      <p className="text-slate-300 text-sm truncate">{item.value}</p>
+                      <p className="text-slate-300 text-sm break-words">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -144,7 +153,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
                 {claim.feedback_text && (
                   <div className="bg-slate-900 rounded-lg p-3">
                     <p className="text-slate-500 text-xs mb-1">Customer feedback</p>
-                    <p className="text-slate-300 text-sm">{claim.feedback_text}</p>
+                    <p className="text-slate-300 text-sm break-words">{claim.feedback_text}</p>
                   </div>
                 )}
 

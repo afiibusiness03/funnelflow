@@ -50,7 +50,7 @@ export default function ClaimsPage() {
     <div className="space-y-5">
       {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-slate-800/50 border border-slate-700/50 rounded-xl p-1 w-fit">
+      <div aria-label="Filter claims by status" className="flex flex-wrap items-center gap-1 bg-slate-800/50 border border-slate-700/50 rounded-xl p-1 w-fit max-w-full">
         {FILTERS.map((f) => {
           const Icon    = f.icon
           const count   = counts[f.value] ?? null
@@ -59,8 +59,9 @@ export default function ClaimsPage() {
             <button
               key={f.value}
               onClick={() => { setLoading(true); setStatus(f.value); setPage(1) }}
+              aria-pressed={active}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition',
+                'flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition',
                 active
                   ? 'bg-purple-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-700'
@@ -82,7 +83,7 @@ export default function ClaimsPage() {
 
         <button
           onClick={handleRefresh}
-          className="ml-1 p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+          className="ml-1 flex h-11 w-11 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
           title="Refresh"
         >
           <RefreshCw className="w-3.5 h-3.5" />

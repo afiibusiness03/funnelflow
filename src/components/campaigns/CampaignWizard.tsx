@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -50,6 +50,11 @@ interface CampaignWizardProps {
 export default function CampaignWizard({ products, promotions }: CampaignWizardProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const wizardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    wizardRef.current?.scrollIntoView({ block: 'start' })
+  }, [step])
   const [serverError, setServerError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -252,7 +257,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div ref={wizardRef} className="max-w-2xl mx-auto">
       {/* Step Indicator */}
       <div className="flex items-center mb-8">
         {STEPS.map((s, idx) => {
@@ -284,7 +289,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
 
           {serverError && (
             <div className="bg-red-500/20 border border-red-500/50 text-red-300 rounded-lg px-4 py-3 mb-5 text-sm">
@@ -315,7 +320,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name.message}</p>}
               </div>
 
-              <div className="space-y-4 p-5 bg-slate-900 rounded-xl border border-slate-700/80 shadow-md">
+              <div className="space-y-4 p-3 sm:p-5 bg-slate-900 rounded-xl border border-slate-700/80 shadow-md">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
                   <div>
                     <div className="flex items-center gap-2">
@@ -361,7 +366,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                     .map((prod) => (
                       <div
                         key={prod.id}
-                        className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-950 border border-purple-500/60 shadow-sm transition"
+                        className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3.5 rounded-xl bg-slate-950 border border-purple-500/60 shadow-sm transition"
                       >
                         <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {prod.image_url ? (
@@ -371,8 +376,8 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                             <Package className="w-5 h-5 text-purple-400" />
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-0">
+                          <span className="text-white font-bold text-sm block break-words sm:truncate">{prod.name}</span>
                           <span className="text-slate-300 font-medium text-xs block mt-0.5">
                             <span className="text-purple-400 capitalize">{prod.platform}</span> · {prod.marketplace}
                             {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
@@ -385,7 +390,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                           type="button"
                           onClick={() => handleRemoveWizardProduct(prod.id)}
                           title="Remove product from campaign"
-                          className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition ml-1"
+                          className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 min-h-11 min-w-11 flex items-center justify-center p-2 rounded-lg transition ml-auto"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -400,7 +405,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
           {/* ── Step 2: Promotion ────────────────────────────── */}
           {step === 2 && (
             <div className="space-y-5">
-              <div className="flex items-start justify-between">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-white font-semibold text-lg mb-1">Choose a promotion</h2>
                   <p className="text-slate-400 text-sm">What will you offer customers after they complete the funnel?</p>
@@ -494,24 +499,24 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
               </div>
 
               {/* Order Verification */}
-              <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
                 <div>
                   <p className="text-slate-200 text-sm font-medium">Require order verification</p>
                   <p className="text-slate-500 text-xs mt-0.5">Customer must enter their order ID to proceed</p>
                 </div>
                 <input type="checkbox" {...register('require_order_verify')} className="sr-only peer" id="order_verify" />
-                <label htmlFor="order_verify" className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+                <label htmlFor="order_verify" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
               </div>
 
               {/* Smart Routing */}
               <div className="p-4 bg-slate-900 rounded-lg border border-slate-700 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-slate-200 text-sm font-medium">Smart routing</p>
                     <p className="text-slate-500 text-xs mt-0.5">Only ask happy customers for a review</p>
                   </div>
                   <input type="checkbox" {...register('smart_routing')} className="sr-only peer" id="smart_routing" />
-                  <label htmlFor="smart_routing" className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+                  <label htmlFor="smart_routing" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
                 </div>
 
                 {smartRouting && (
@@ -592,7 +597,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
 
               <div className="space-y-3">
                 {/* Product */}
-                <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg border border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-purple-400" />
                     <span className="text-slate-400 text-sm">Product</span>
@@ -603,7 +608,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 </div>
 
                 {/* Promotion */}
-                <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg border border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
                   <div className="flex items-center gap-2">
                     <Gift className="w-4 h-4 text-purple-400" />
                     <span className="text-slate-400 text-sm">Promotion</span>
@@ -612,7 +617,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                     {selectedPromotion?.name ?? 'None'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg border border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-purple-400" />
                     <span className="text-slate-400 text-sm">Smart routing</span>
@@ -633,7 +638,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-5">
           <button
             type="button"
             onClick={() => setStep(s => Math.max(s - 1, 1))}
@@ -669,7 +674,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
       {/* New Product Modal */}
       {showNewProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-white font-semibold text-lg mb-4">Add New Product</h3>
             <div className="space-y-4">
               <div>
@@ -682,7 +687,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5">Platform</label>
                   <select
@@ -738,7 +743,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-3 mt-6">
               <button
                 type="button"
                 onClick={() => setShowNewProductModal(false)}
@@ -763,7 +768,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
       {/* New Promotion Modal */}
       {showNewPromoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-800 w-full max-w-md rounded-xl p-4 sm:p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-white font-semibold text-lg mb-4">Add New Promotion</h3>
             <div className="space-y-4">
               <div>
@@ -820,7 +825,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-3 mt-6">
               <button
                 type="button"
                 onClick={() => setShowNewPromoModal(false)}
@@ -845,8 +850,8 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
       {/* Add Products from Catalog Popup Modal */}
       {showSelectProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700/90 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-700/90 w-full max-w-lg rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
                   <Package className="w-5 h-5" />
@@ -926,7 +931,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                       className={cn(
                         'flex items-center gap-3.5 p-3.5 rounded-xl border transition cursor-pointer',
                         isChecked
-                          ? 'bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-900/20'
+                          ? 'bg-purple-500/10 border-purple-500 text-white shadow-sm'
                           : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
                       )}
                     >
@@ -945,14 +950,14 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                        <span className="text-white font-bold text-sm block break-words sm:truncate">{prod.name}</span>
                         <span className="text-slate-300 font-semibold text-xs block mt-0.5">
                           <span className="text-purple-400 font-bold capitalize">{prod.platform}</span> · {prod.marketplace}
                           {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
                         </span>
                       </div>
                       {isChecked && (
-                        <span className="text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
+                        <span className="hidden sm:inline text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
                           Selected
                         </span>
                       )}
@@ -963,7 +968,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -974,7 +979,7 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
               >
                 + Create New Product
               </button>
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowSelectProductModal(false)}

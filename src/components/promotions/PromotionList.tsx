@@ -42,14 +42,14 @@ export default function PromotionList({ promotions: initial }: { promotions: Pro
         return (
           <div
             key={promo.id}
-            className="bg-slate-800/50 border border-slate-700/50 rounded-xl px-5 py-4 hover:border-slate-600 transition flex items-center gap-4"
+            className="bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 sm:px-5 py-4 hover:border-slate-600 transition grid grid-cols-[2.5rem_minmax(0,1fr)] sm:flex items-center gap-3 sm:gap-4"
           >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${typeConfig.color.replace('text-', 'bg-').replace('/20', '/10')} border border-current/20`}>
               <Icon className={`w-5 h-5 ${typeConfig.color.split(' ')[1]}`} />
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
+              <div className="flex flex-wrap items-center gap-2 mb-0.5">
                 <h3 className="text-white font-medium text-sm truncate">{promo.name}</h3>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeConfig.color}`}>
                   {typeConfig.label}
@@ -66,9 +66,9 @@ export default function PromotionList({ promotions: initial }: { promotions: Pro
             </div>
 
             {/* Discount / coupon badge */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 sm:max-w-[50%]">
               {promo.type === 'coupon_code' && (
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   {promo.discount_value && (
                     <span className="text-xs font-bold bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
                       {promo.discount_type === 'fixed_value'
@@ -77,7 +77,7 @@ export default function PromotionList({ promotions: initial }: { promotions: Pro
                     </span>
                   )}
                   {promo.coupon_code && (
-                    <code className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded font-mono">
+                    <code className="max-w-full break-all text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded font-mono">
                       {promo.coupon_code}
                     </code>
                   )}
@@ -92,7 +92,7 @@ export default function PromotionList({ promotions: initial }: { promotions: Pro
                 onClick={() => toggleActive(promo.id, promo.is_active)}
                 disabled={toggling === promo.id}
                 title={promo.is_active ? 'Deactivate' : 'Activate'}
-                className="p-1.5 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
               >
                 {promo.is_active
                   ? <CheckCircle className="w-4 h-4 text-green-400" />
@@ -103,7 +103,7 @@ export default function PromotionList({ promotions: initial }: { promotions: Pro
               {/* Edit */}
               <Link
                 href={`/dashboard/promotions/${promo.id}`}
-                className="p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
                 title="Edit promotion"
               >
                 <Pencil className="w-4 h-4" />

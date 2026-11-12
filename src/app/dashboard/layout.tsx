@@ -1,8 +1,6 @@
 import { getAccount, hasAccess } from '@/lib/security/access'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/dashboard/Sidebar'
-import Header from '@/components/dashboard/Header'
+import DashboardShell from '@/components/dashboard/DashboardShell'
 import Link from 'next/link'
 import { AlertTriangle, Clock } from 'lucide-react'
 
@@ -75,26 +73,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const brandColorRgb = hexToRgb(brandColor)
 
   return (
-    <div 
-      className="flex h-screen bg-slate-950 overflow-hidden"
+    <DashboardShell
+      tenantName={tenant.name}
+      tenantLogo={tenant.logo_url}
+      userEmail={userData.email}
+      pendingClaims={pendingClaims ?? 0}
       style={{
         '--brand-color': brandColor,
         '--brand-color-dark': brandColorDark,
         '--brand-color-rgb': brandColorRgb,
       } as React.CSSProperties}
-    >
-      <Sidebar
-        tenantName={tenant.name}
-        tenantLogo={tenant.logo_url}
-        userEmail={userData.email}
-        pendingClaims={pendingClaims ?? 0}
-      />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-
-        {/* Trial expiry banner — only shows when ≤ 5 days left */}
-        {showTrialBanner && (
-          <div className={`flex items-center justify-between px-6 py-2.5 text-sm font-medium flex-shrink-0 ${
+      banner={showTrialBanner && (
+          <div className={`flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-2.5 text-sm font-medium flex-shrink-0 ${
             daysLeft! <= 2
               ? 'bg-red-500/20 border-b border-red-500/40 text-red-300'
               : 'bg-amber-500/20 border-b border-amber-500/40 text-amber-300'
@@ -118,11 +108,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </Link>
           </div>
         )}
-
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    >
+      {children}
+    </DashboardShell>
   )
 }

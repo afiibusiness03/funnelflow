@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { Bell, Plus, Search, Sun, Moon } from 'lucide-react'
 
 const PAGE_TITLES: Record<string, { title: string; description: string; action?: { label: string; href: string } }> = {
@@ -28,6 +28,7 @@ function getPageMeta(pathname: string) {
 
 interface HeaderProps {
   notifications?: number
+  menuButton?: ReactNode
 }
 
 function themeSnapshot() { return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light' }
@@ -39,7 +40,7 @@ function subscribeTheme(callback: () => void) {
   return () => { window.removeEventListener('storage', sync); window.removeEventListener('theme-change', sync) }
 }
 
-export default function Header({ notifications = 0 }: HeaderProps) {
+export default function Header({ notifications = 0, menuButton }: HeaderProps) {
   const pathname = usePathname()
   const meta = getPageMeta(pathname)
   const theme = useSyncExternalStore(subscribeTheme, themeSnapshot, () => 'light')
@@ -56,33 +57,36 @@ export default function Header({ notifications = 0 }: HeaderProps) {
   }
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between px-6 flex-shrink-0">
+    <header className="min-h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur flex items-center justify-between gap-2 px-2 py-2 sm:px-6 flex-shrink-0">
       {/* Left — Page title */}
-      <div>
-        <h1 className="text-white font-semibold text-base leading-tight">{meta.title}</h1>
+      <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+        {menuButton}
+        <div className="min-w-0">
+        <h1 className="truncate text-white font-semibold text-base leading-tight">{meta.title}</h1>
         {meta.description && (
-          <p className="text-slate-400 text-xs leading-tight">{meta.description}</p>
+          <p className="hidden text-slate-400 text-xs leading-tight sm:block">{meta.description}</p>
         )}
+        </div>
       </div>
 
       {/* Right — Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         {/* Search (future) */}
-        <button className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition">
+        <button aria-label="Search" className="hidden w-11 h-11 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 sm:flex items-center justify-center transition">
           <Search className="w-4 h-4" />
         </button>
 
         {/* Light/Dark Mode Toggle */}
         <button
           onClick={toggleTheme}
-          className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition"
+          className="w-11 h-11 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition"
           title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
         >
           {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </button>
 
         {/* Notifications */}
-        <button className="relative w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition">
+        <button aria-label="Notifications" className="hidden relative w-11 h-11 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 sm:flex items-center justify-center transition">
           <Bell className="w-4 h-4" />
           {notifications > 0 && (
             <span className="absolute top-1 right-1 w-2 h-2 bg-purple-500 rounded-full" />
@@ -93,10 +97,12 @@ export default function Header({ notifications = 0 }: HeaderProps) {
         {meta.action && (
           <Link
             href={meta.action.href}
-            className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition"
+            aria-label={meta.action.label}
+            title={meta.action.label}
+            className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition"
           >
             <Plus className="w-3.5 h-3.5" />
-            {meta.action.label}
+            <span className="hidden sm:inline">{meta.action.label}</span>
           </Link>
         )}
       </div>

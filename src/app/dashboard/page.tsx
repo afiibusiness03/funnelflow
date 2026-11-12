@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* Trial Banner */}
       {isTrialing && (
-        <div className="bg-purple-600/20 border border-purple-500/40 rounded-xl px-5 py-3.5 flex items-center justify-between">
+        <div className="bg-purple-600/20 border border-purple-500/40 rounded-xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-purple-300 font-medium text-sm">
               🎉 Free trial — <strong>{trialDaysLeft} days left</strong>

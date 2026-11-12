@@ -204,7 +204,7 @@ export default function SettingsPage() {
       {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
 
       {/* Brand settings */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center">
             <Building2 className="w-4 h-4 text-purple-400" />
@@ -315,7 +315,7 @@ export default function SettingsPage() {
 
       {/* ─── PLATFORM ADMIN: MARKETING PAGE CUSTOMIZER ─────────────────── */}
       {isPlatformAdmin && (
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-purple-400" />
@@ -328,7 +328,7 @@ export default function SettingsPage() {
 
           <form onSubmit={handleSaveSiteSettings} className="space-y-6">
             {/* Platform Mode Access Toggle */}
-            <div className="bg-slate-900/90 border border-purple-500/40 p-4 rounded-xl flex items-center justify-between shadow-lg">
+            <div className="bg-slate-900/90 border border-purple-500/40 p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
               <div className="space-y-0.5">
                 <span className="text-white font-bold text-sm flex items-center gap-2">
                   <Shield className="w-4 h-4 text-purple-400" />
@@ -564,7 +564,7 @@ export default function SettingsPage() {
       )}
 
       {/* Account info */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-9 h-9 bg-slate-700 rounded-lg flex items-center justify-center">
             <Shield className="w-4 h-4 text-slate-300" />
@@ -576,15 +576,15 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-slate-700">
             <span className="text-slate-400 text-sm">Email</span>
             <span className="text-white text-sm">{userEmail}</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-2 border-b border-slate-700">
             <span className="text-slate-400 text-sm">Name</span>
             <span className="text-white text-sm">{userName || '—'}</span>
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-2">
             <span className="text-slate-400 text-sm">Password</span>
             <button className="text-purple-400 hover:text-purple-300 text-sm transition">
               Change password →
@@ -594,10 +594,10 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger zone */}
-      <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
+      <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 sm:p-6">
         <h3 className="text-red-400 font-semibold text-sm mb-1">Danger Zone</h3>
         <p className="text-slate-400 text-xs mb-4">These actions are permanent and cannot be undone.</p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/dashboard/settings/billing"
             className="text-slate-400 hover:text-white text-sm border border-slate-600 hover:border-slate-500 px-3 py-2 rounded-lg transition"

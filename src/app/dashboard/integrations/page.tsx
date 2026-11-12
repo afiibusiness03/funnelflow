@@ -159,11 +159,11 @@ export default function IntegrationsPage() {
                   connected ? `${platform.color}` : 'bg-slate-800/50 border-slate-700/50'
                 )}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl leading-none">{platform.logo}</span>
                     <div>
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
                         <h3 className="text-white font-medium text-sm">{platform.name}</h3>
                         {connected
                           ? <span className="flex items-center gap-1 text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">

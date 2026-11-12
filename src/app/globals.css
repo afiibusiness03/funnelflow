@@ -35,6 +35,22 @@
   body { @apply bg-background text-foreground; }
 }
 
+/* Dashboard content must shrink within the app shell, including long customer
+   values and native form controls. Keep scrolling on the content pane. */
+.dashboard-shell { overflow-wrap: anywhere; }
+.dashboard-shell .grid > * { min-width: 0; }
+.dashboard-shell :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+.dashboard-shell :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--brand-color, #6366f1);
+  outline-offset: 3px;
+}
+@media (max-width: 639px) {
+  /* Prevent iOS from zooming the viewport when a dashboard field is focused. */
+  .dashboard-shell :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+    font-size: 16px;
+  }
+}
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -130,6 +146,12 @@ html.light .text-slate-500 {
   color: #64748b !important;
 }
 
+/* Status text needs sufficient contrast on the dashboard's light cards. */
+html.light .dashboard-shell main .text-yellow-400 { color: #a16207 !important; }
+html.light .dashboard-shell main .text-green-400 { color: #15803d !important; }
+html.light .dashboard-shell main .text-blue-400 { color: #1d4ed8 !important; }
+html.light .dashboard-shell main .text-red-400 { color: #b91c1c !important; }
+
 /* Hover overrides */
 html.light .hover\:text-white:hover {
   color: #0f172a !important;
@@ -145,8 +167,11 @@ html.light .hover\:border-slate-600:hover {
 }
 
 /* Keep Sidebar dark for a contrast dashboard experience */
-html.light aside {
+html.light .dashboard-shell aside.bg-slate-900 {
   background-color: #0f172a !important;
+}
+html.light .dashboard-shell aside .hover\:bg-slate-800:hover {
+  background-color: #1e293b !important;
 }
 html.light aside .text-white {
   color: #ffffff !important;

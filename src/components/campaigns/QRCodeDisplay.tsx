@@ -47,13 +47,13 @@ export default function QRCodeDisplay({
   }
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+    <div className="bg-slate-800/50 border border-slate-700/50 min-w-0 rounded-xl p-4 sm:p-6">
       {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       <h3 className="text-white font-semibold mb-4">Your QR Code</h3>
 
       {/* QR Preview */}
       <div className="flex justify-center mb-5">
-        <div className="w-48 h-48 bg-white rounded-xl p-3 flex items-center justify-center">
+        <div className="w-48 max-w-full aspect-square bg-white rounded-xl p-3 flex items-center justify-center">
           {qrCodeUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={qrCodeUrl} alt="QR Code" className="w-full h-full" />
@@ -65,11 +65,11 @@ export default function QRCodeDisplay({
 
       {/* Funnel URL */}
       <div className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 flex items-center gap-2 mb-4">
-        <span className="text-slate-400 text-xs flex-1 truncate font-mono">{funnelUrl}</span>
-        <button onClick={copyLink} className="text-slate-400 hover:text-white transition flex-shrink-0">
+        <span className="text-slate-400 text-xs min-w-0 flex-1 truncate font-mono">{funnelUrl}</span>
+        <button onClick={copyLink} aria-label="Copy funnel link" className="flex h-11 w-11 items-center justify-center text-slate-400 hover:text-white transition flex-shrink-0">
           {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
         </button>
-        <a href={funnelUrl} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition flex-shrink-0">
+        <a href={funnelUrl} target="_blank" rel="noopener noreferrer" aria-label="Open funnel" className="flex h-11 w-11 items-center justify-center text-slate-400 hover:text-white transition flex-shrink-0">
           <ExternalLink className="w-4 h-4" />
         </a>
       </div>

@@ -51,7 +51,7 @@ export default async function BillingPage() {
     <div className="space-y-8 max-w-4xl">
       {/* Current plan banner */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">Current Plan</p>
             <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ export default async function BillingPage() {
             {invoices.map((inv, idx) => (
               <div
                 key={inv.id}
-                className={`flex items-center justify-between px-5 py-3 ${idx < invoices.length - 1 ? 'border-b border-slate-700/50' : ''}`}
+                className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${idx < invoices.length - 1 ? 'border-b border-slate-700/50' : ''}`}
               >
                 <div>
                   <p className="text-white text-sm">{formatCurrency(inv.amount_paid, inv.currency)}</p>

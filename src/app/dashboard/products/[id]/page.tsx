@@ -79,7 +79,7 @@ export default function EditProductPage({ params: routeParams }: { params: Promi
         <ArrowLeft className="w-4 h-4" /> Back to Products
       </Link>
 
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
             <Package className="w-5 h-5 text-blue-400" />
@@ -114,7 +114,7 @@ export default function EditProductPage({ params: routeParams }: { params: Promi
           </div>
 
           {/* ASIN / SKU */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">ASIN <span className="text-slate-500 font-normal">(optional)</span></label>
               <input {...register('asin')} placeholder="B08XYZ..." className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-sm font-mono" />
@@ -173,17 +173,17 @@ export default function EditProductPage({ params: routeParams }: { params: Promi
           </div>
 
           {/* Active toggle */}
-          <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+          <div className="flex items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
             <div>
               <p className="text-slate-200 text-sm font-medium">Active</p>
               <p className="text-slate-500 text-xs mt-0.5">Inactive products cannot be used in new campaigns</p>
             </div>
             <input type="checkbox" {...register('is_active')} className="sr-only peer" id="is_active" />
-            <label htmlFor="is_active" className="w-10 h-5 bg-slate-700 peer-checked:bg-green-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+            <label htmlFor="is_active" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-green-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             <Link href="/dashboard/products" className="px-4 py-2 text-slate-400 hover:text-white text-sm transition">Cancel</Link>
             <button
               type="submit"

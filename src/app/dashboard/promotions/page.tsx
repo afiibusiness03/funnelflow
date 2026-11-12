@@ -23,7 +23,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-slate-400 text-sm">
           {count ?? 0} of {maxPromos === 999999 ? 'unlimited' : maxPromos} promotions
         </p>

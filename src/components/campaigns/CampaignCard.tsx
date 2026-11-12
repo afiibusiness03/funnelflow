@@ -65,7 +65,7 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
     <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600 transition-all group flex flex-col justify-between h-full">
       <Link href={`/dashboard/campaigns/${campaign.id}`} className="block space-y-4 cursor-pointer flex-1">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/30 transition">
               <QrCode className="w-4 h-4 text-purple-400" />
@@ -105,12 +105,12 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
       </Link>
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-700 mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-700 mt-4">
         <span className="text-slate-500 text-xs">{formatDate(campaign.created_at)}</span>
         <div className="flex items-center gap-1">
           <Link
             href={`/dashboard/campaigns/${campaign.id}/analytics`}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
             title="Analytics"
           >
             <BarChart2 className="w-3.5 h-3.5" />
@@ -118,7 +118,7 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
           <button
             onClick={toggleStatus}
             disabled={loading}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
             title={campaign.status === 'active' ? 'Pause' : 'Resume'}
           >
             {campaign.status === 'active'
@@ -128,7 +128,7 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
           </button>
           <Link
             href={`/dashboard/campaigns/${campaign.id}`}
-            className="p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
             title="Edit campaign"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -140,7 +140,7 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
               setShowDeleteModal(true)
             }}
             disabled={loading}
-            className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
             title="Delete campaign"
           >
             <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
@@ -151,7 +151,7 @@ export default function CampaignCard({ campaign, onStatusChange }: CampaignCardP
       {/* Modern Custom Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>

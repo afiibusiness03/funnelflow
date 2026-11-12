@@ -54,7 +54,7 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
             onClick={() => doAction('approve')}
             disabled={!!loading}
             className={cn(
-              'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition',
+              'flex min-h-11 items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition',
               'bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50'
             )}
             title="Approve & Deliver"
@@ -63,14 +63,14 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
               ? <Loader2 className="w-3 h-3 animate-spin" />
               : <CheckCircle className="w-3 h-3" />
             }
-            <span className="hidden sm:inline">Approve</span>
+            <span className="inline">Approve</span>
           </button>
 
           <button
             onClick={() => doAction('reject')}
             disabled={!!loading}
             className={cn(
-              'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition',
+              'flex min-h-11 items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition',
               'bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50'
             )}
             title="Reject"
@@ -79,7 +79,7 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
               ? <Loader2 className="w-3 h-3 animate-spin" />
               : <XCircle className="w-3 h-3" />
             }
-            <span className="hidden sm:inline">Reject</span>
+            <span className="inline">Reject</span>
           </button>
         </>
       )}
@@ -89,13 +89,13 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
         <button
           onClick={() => doAction('deliver')}
           disabled={!!loading}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50 transition"
+          className="flex min-h-11 items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50 transition"
         >
           {loading === 'deliver'
             ? <Loader2 className="w-3 h-3 animate-spin" />
             : <RefreshCw className="w-3 h-3" />
           }
-          <span className="hidden sm:inline">{manual ? 'Mark fulfilled' : 'Deliver'}</span>
+          <span className="inline">{manual ? 'Mark fulfilled' : 'Deliver'}</span>
         </button>
       )}
 
@@ -104,14 +104,14 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
         <button
           onClick={() => doAction('approve')}
           disabled={!!loading}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 transition"
+          className="flex min-h-11 items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 transition"
           title="Approve anyway"
         >
           {loading === 'approve'
             ? <Loader2 className="w-3 h-3 animate-spin" />
             : <CheckCircle className="w-3 h-3" />
           }
-          <span className="hidden sm:inline">Approve</span>
+          <span className="inline">Approve</span>
         </button>
       )}
     </div>

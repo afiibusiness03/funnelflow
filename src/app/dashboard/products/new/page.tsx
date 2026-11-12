@@ -87,7 +87,7 @@ export default function NewProductPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Products
       </Link>
 
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
             <Package className="w-5 h-5 text-purple-400" />
@@ -122,7 +122,7 @@ export default function NewProductPage() {
           </div>
 
           {/* Platform + Marketplace */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Platform <span className="text-red-400">*</span>
@@ -228,7 +228,7 @@ export default function NewProductPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             <Link
               href="/dashboard/products"
               className="px-4 py-2 text-slate-400 hover:text-white text-sm transition"

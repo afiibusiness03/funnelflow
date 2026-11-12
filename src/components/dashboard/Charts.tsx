@@ -20,10 +20,10 @@ interface ScansChartProps {
 
 export function ScansChart({ data }: ScansChartProps) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl min-w-0 p-4 sm:p-5">
       <h3 className="text-white font-semibold text-sm mb-1">Scans & Completions</h3>
       <p className="text-slate-400 text-xs mb-5">Last 30 days</p>
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" minWidth={0} height={200}>
         <AreaChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="scansGrad" x1="0" y1="0" x2="0" y2="1">
@@ -80,7 +80,7 @@ export function RatingChart({ data }: RatingChartProps) {
     : Object.entries(data).reduce((sum, [star, count]) => sum + Number(star) * count, 0) / total
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl min-w-0 p-4 sm:p-5">
       <div className="flex items-start justify-between mb-5">
         <div>
           <h3 className="text-white font-semibold text-sm mb-1">Rating Distribution</h3>
@@ -91,7 +91,7 @@ export function RatingChart({ data }: RatingChartProps) {
           <p className="text-slate-400 text-xs">avg rating</p>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={150}>
+      <ResponsiveContainer width="100%" minWidth={0} height={150}>
         <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
           <XAxis dataKey="star" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
@@ -119,7 +119,7 @@ interface FunnelChartProps {
 
 export function FunnelDropoffChart({ data }: FunnelChartProps) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl min-w-0 p-4 sm:p-5">
       <h3 className="text-white font-semibold text-sm mb-1">Funnel Drop-off</h3>
       <p className="text-slate-400 text-xs mb-5">Where customers leave</p>
       <div className="space-y-3">

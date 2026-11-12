@@ -88,7 +88,7 @@ export default function ProductList({ products: initial }: { products: Product[]
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-700">
             <span className="text-slate-500 text-xs">Added {formatDate(product.created_at)}</span>
             <div className="flex items-center gap-1.5">
               {product.product_url && (
@@ -96,7 +96,7 @@ export default function ProductList({ products: initial }: { products: Product[]
                   href={product.product_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
+                  className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition"
                   title="View product"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -108,7 +108,7 @@ export default function ProductList({ products: initial }: { products: Product[]
                 onClick={() => toggleActive(product.id, product.is_active)}
                 disabled={toggling === product.id}
                 title={product.is_active ? 'Deactivate' : 'Activate'}
-                className="p-1.5 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
               >
                 {product.is_active
                   ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
@@ -119,7 +119,7 @@ export default function ProductList({ products: initial }: { products: Product[]
               {/* Edit */}
               <Link
                 href={`/dashboard/products/${product.id}`}
-                className="p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center p-1.5 text-slate-400 hover:text-purple-400 rounded-lg hover:bg-slate-700 transition"
                 title="Edit product"
               >
                 <Pencil className="w-3.5 h-3.5" />

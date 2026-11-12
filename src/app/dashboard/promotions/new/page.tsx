@@ -87,7 +87,7 @@ export default function NewPromotionPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Promotions
       </Link>
 
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
             <Gift className="w-5 h-5 text-purple-400" />
@@ -192,7 +192,7 @@ export default function NewPromotionPage() {
               </div>
 
               {/* Discount amount */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     {discountType === 'percentage' ? 'Discount %' : 'Discount Amount'}
@@ -294,7 +294,7 @@ export default function NewPromotionPage() {
 
           {/* Gift Card fields */}
           {selectedType === 'gift_card' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Value ($)</label>
                 <input
@@ -349,13 +349,13 @@ export default function NewPromotionPage() {
           <div className="space-y-3 pt-2 border-t border-slate-700">
             <h3 className="text-slate-300 text-sm font-medium">Settings</h3>
 
-            <label className="flex items-center justify-between cursor-pointer">
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-slate-300 text-sm">Auto-deliver</p>
                 <p className="text-slate-500 text-xs">Send promotion automatically after funnel completes</p>
               </div>
               <input type="checkbox" {...register('auto_deliver')} className="sr-only peer" />
-              <div className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+              <div className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
             </label>
 
             <div>
@@ -373,7 +373,7 @@ export default function NewPromotionPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
             <Link href="/dashboard/promotions" className="px-4 py-2 text-slate-400 hover:text-white text-sm transition">
               Cancel
             </Link>

@@ -31,10 +31,10 @@ export default function StatsCard({
 
   return (
     <div className={cn(
-      'bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600 transition-all',
+      'min-w-0 bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-5 hover:border-slate-600 transition-all',
       className
     )}>
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
         <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', iconBg)}>
           <Icon className={cn('w-5 h-5', iconColor)} />
         </div>
@@ -56,7 +56,7 @@ export default function StatsCard({
 
       <div>
         <p className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-1">{title}</p>
-        <p className="text-white text-2xl font-bold leading-tight">{value}</p>
+        <p className="break-words text-white text-xl sm:text-2xl font-bold leading-tight">{value}</p>
         {(description || changePeriod) && (
           <p className="text-slate-500 text-xs mt-1">
             {description ?? changePeriod}

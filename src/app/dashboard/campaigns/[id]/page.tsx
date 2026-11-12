@@ -224,7 +224,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 space-y-6">
+        <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <Settings className="w-5 h-5 text-purple-400" />
@@ -263,7 +263,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
             </div>
 
             {/* Campaign Products Selection */}
-            <div className="space-y-4 p-5 bg-slate-900 rounded-xl border border-slate-700/80 shadow-md">
+            <div className="space-y-4 p-3 sm:p-5 bg-slate-900 rounded-xl border border-slate-700/80 shadow-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
                 <div>
                   <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                   .map((prod) => (
                     <div
                       key={prod.id}
-                      className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-950 border border-purple-500/60 shadow-sm transition"
+                      className="flex flex-wrap sm:flex-nowrap items-center gap-3 p-3.5 rounded-xl bg-slate-950 border border-purple-500/60 shadow-sm transition"
                     >
                       <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {prod.image_url ? (
@@ -319,8 +319,8 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                           <Package className="w-5 h-5 text-purple-400" />
                         )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                      <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-0">
+                        <span className="text-white font-bold text-sm block break-words sm:truncate">{prod.name}</span>
                         <span className="text-slate-300 font-medium text-xs block mt-0.5">
                           <span className="text-purple-400 capitalize">{prod.platform}</span> · {prod.marketplace}
                           {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
@@ -333,7 +333,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                         type="button"
                         onClick={() => handleRemoveProduct(prod.id)}
                         title="Remove product from campaign"
-                        className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition ml-1"
+                        className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 min-h-11 min-w-11 flex items-center justify-center p-2 rounded-lg transition ml-auto"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -343,24 +343,24 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
             </div>
 
             {/* Order Verification */}
-            <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
               <div>
                 <p className="text-slate-200 text-sm font-medium">Require order verification</p>
                 <p className="text-slate-500 text-xs mt-0.5">Customer must enter their order ID to proceed</p>
               </div>
               <input type="checkbox" {...register('require_order_verify')} className="sr-only peer" id="order_verify" />
-              <label htmlFor="order_verify" className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+              <label htmlFor="order_verify" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
             </div>
 
             {/* Smart Routing */}
             <div className="p-4 bg-slate-900 rounded-lg border border-slate-700 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-slate-200 text-sm font-medium">Smart routing</p>
                   <p className="text-slate-500 text-xs mt-0.5">Only ask happy customers for a review</p>
                 </div>
                 <input type="checkbox" {...register('smart_routing')} className="sr-only peer" id="smart_routing" />
-                <label htmlFor="smart_routing" className="w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
+                <label htmlFor="smart_routing" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />
               </div>
               {smartRouting && (
                 <div>
@@ -432,7 +432,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowDeleteModal(true)}
@@ -474,7 +474,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
       {/* Modern Custom Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-700/80 rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6 text-red-400" />
             </div>
@@ -508,8 +508,8 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
       {/* Quick Add Product Modal */}
       {showNewProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex flex-wrap items-center gap-2.5 pb-2 border-b border-slate-800">
               <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
                 <Package className="w-4 h-4" />
               </div>
@@ -526,7 +526,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Platform</label>
                   <select
@@ -574,7 +574,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2.5 pt-2">
+            <div className="flex flex-wrap justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setShowNewProductModal(false)}
@@ -599,8 +599,8 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
       {/* Add Products from Catalog Popup Modal */}
       {showSelectProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700/90 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-slate-900 border border-slate-700/90 w-full max-w-lg rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
                   <Package className="w-5 h-5" />
@@ -680,7 +680,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                       className={cn(
                         'flex items-center gap-3.5 p-3.5 rounded-xl border transition cursor-pointer',
                         isChecked
-                          ? 'bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-900/20'
+                          ? 'bg-purple-500/10 border-purple-500 text-white shadow-sm'
                           : 'bg-slate-950 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
                       )}
                     >
@@ -699,14 +699,14 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-white font-bold text-sm block truncate">{prod.name}</span>
+                        <span className="text-white font-bold text-sm block break-words sm:truncate">{prod.name}</span>
                         <span className="text-slate-300 font-semibold text-xs block mt-0.5">
                           <span className="text-purple-400 font-bold capitalize">{prod.platform}</span> · {prod.marketplace}
                           {prod.asin ? ` · ASIN: ${prod.asin}` : ''}
                         </span>
                       </div>
                       {isChecked && (
-                        <span className="text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
+                        <span className="hidden sm:inline text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded-md shadow-xs">
                           Selected
                         </span>
                       )}
@@ -717,7 +717,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -728,7 +728,7 @@ export default function EditCampaignPage({ params: routeParams }: { params: Prom
               >
                 + Create New Product
               </button>
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowSelectProductModal(false)}
