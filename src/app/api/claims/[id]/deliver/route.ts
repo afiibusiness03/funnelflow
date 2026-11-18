@@ -5,6 +5,7 @@ import { apiError, checkOrigin, HttpError, uuid, readJson } from '@/lib/security
 import { rateLimit } from '@/lib/security/rate-limit'
 import { deliverReward } from '@/lib/resend/deliver-reward'
 import { createServiceClient } from '@/lib/supabase/server'
+import { emailDeliveryPaused, isPausedEmailClaim } from '@/lib/resend/delivery-mode'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,10 +15,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!uuid.safeParse(id).success) throw new HttpError(400, 'Invalid claim')
     await rateLimit(request, 'claim-delivery', 20)
     const db = createServiceClient()
-    const { data: claim } = await db.from('funnel_submissions').select('claim_status').eq('id',id).eq('tenant_id',profile.tenant_id).single()
+    const { data: claim } = await db.from('funnel_submissions').select('claim_status,promotion:promotions(type),delivery:reward_deliveries(type:payload->>type)').eq('id',id).eq('tenant_id',profile.tenant_id).single()
     if (!claim) throw new HttpError(404, 'Claim not found')
     if (!['approved','delivered'].includes(claim.claim_status)) throw new HttpError(409, 'Approve the claim first')
     const body = await readJson(request, z.object({ manualFulfilled: z.boolean().optional() }))
+    if (isPausedEmailClaim(claim)) return NextResponse.json(emailDeliveryPaused)
     // The authenticated seller is delivering an already-approved claim, including
     // legacy approvals that predate reward reservations.
     let delivered = await deliverReward(id,profile.tenant_id,true)

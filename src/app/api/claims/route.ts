@@ -2,6 +2,7 @@ import { requireAccount } from '@/lib/security/access'
 import { apiError } from '@/lib/security/http'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rewardEmailEnabled } from '@/lib/resend/delivery-mode'
 
 export async function GET(request: Request) {
   let account
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
   if (error) return NextResponse.json({ error: 'Unable to load claims' }, { status: 500 })
 
   return NextResponse.json({
+    email_delivery_enabled: rewardEmailEnabled(),
     data,
     counts,
     count,

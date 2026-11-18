@@ -52,7 +52,7 @@ function deliveryHarness(options: { missingKey?: boolean; sendError?: boolean; f
       if (name.startsWith('@/')) return load(`src/${name.slice(2)}.ts`)
       if (name.startsWith('.')) return load(resolve(dirname(file), `${name}.ts`))
       return require(name)
-    }, process: { env: options.missingKey ? {} : { RESEND_API_KEY: 're_synthetic' } }, Date, URL, Buffer, console: { error() {} } }, { filename: file, timeout: 3000 })
+    }, process: { env: options.missingKey ? { REWARD_EMAIL_ENABLED: 'true' } : { REWARD_EMAIL_ENABLED: 'true', RESEND_API_KEY: 're_synthetic' } }, Date, URL, Buffer, console: { error() {} } }, { filename: file, timeout: 3000 })
     return exports
   }
   return { load, sends, rpcs }

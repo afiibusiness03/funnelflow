@@ -15,7 +15,7 @@ const request = (body: unknown, url = 'https://test.invalid/api/test') => new Re
 })
 
 // Run the actual handlers with an isolated database/provider boundary. No env files or network.
-function harness(options: { anonymous?: boolean; active?: boolean; rateError?: boolean; rateAllowed?: boolean; webhook?: any; syncError?: boolean; duplicateClaim?: boolean; autoDeliver?: boolean; deliveryError?: boolean; promotionType?: string; claimStatus?: string } = {}) {
+function harness(options: { anonymous?: boolean; active?: boolean; rateError?: boolean; rateAllowed?: boolean; webhook?: any; syncError?: boolean; duplicateClaim?: boolean; autoDeliver?: boolean; deliveryError?: boolean; promotionType?: string; claimStatus?: string; emailEnabled?: string; reservedType?: string } = {}) {
   const queries: any[] = [], sends: any[] = []
   const campaign = { id: A, tenant_id: A, promotion_id: A, require_order_verify: true,
     smart_routing: false, review_url: 'https://example.invalid/review',
@@ -40,7 +40,7 @@ function harness(options: { anonymous?: boolean; active?: boolean; rateError?: b
         let data: any = null
         if (table === 'campaigns') data = campaign
         if (table === 'funnel_submissions' && query.op === 'insert') data = { id: B }
-        if (table === 'funnel_submissions' && query.op === 'read' && options.claimStatus) data = { claim_status: options.claimStatus }
+        if (table === 'funnel_submissions' && query.op === 'read' && options.claimStatus) data = { claim_status: options.claimStatus, promotion: campaign.promotion, delivery: options.reservedType ? { type: options.reservedType } : null }
         if (table === 'funnel_submissions' && query.op === 'insert' && options.duplicateClaim) return { data: null, error: { code: '23505' } }
         if (table === 'products') data = [] // foreign selection is not owned
         return { data, error: null, count: 0 }
@@ -76,7 +76,7 @@ function harness(options: { anonymous?: boolean; active?: boolean; rateError?: b
       if (name.startsWith('@/')) return load(`src/${name.slice(2)}.ts`)
       if (name.startsWith('.')) return load(resolve(dirname(file),`${name}.ts`))
       return require(name)
-    }, process: { env: { SUPABASE_SERVICE_ROLE_KEY: 'synthetic-only', RESEND_API_KEY: 're_synthetic', RESEND_WEBHOOK_SECRET: 'whsec_c3ludGhldGlj', STRIPE_WEBHOOK_SECRET: 'synthetic' } },
+    }, process: { env: { SUPABASE_SERVICE_ROLE_KEY: 'synthetic-only', REWARD_EMAIL_ENABLED: options.emailEnabled ?? 'true', RESEND_API_KEY: 're_synthetic', RESEND_WEBHOOK_SECRET: 'whsec_c3ludGhldGlj', STRIPE_WEBHOOK_SECRET: 'synthetic' } },
       Buffer, URL, Date, console: { error() {} }, fetch() { throw new Error('Network is disabled in route tests') },
     }, { filename: file, timeout: 3000 })
     return exports
@@ -115,6 +115,44 @@ test('automatic digital rewards send immediately even when an order number is re
     assert.deepEqual(h.sends[0], [B, A, false])
     assert.equal(h.queries.find(q => q.table === 'funnel_submissions' && q.op === 'insert').payload.order_verified, false)
   }
+})
+
+test('paused email saves automatic claims as approved without reserving rewards or calling the provider', async () => {
+  for (const emailEnabled of ['', 'false']) {
+    const h = harness({ autoDeliver: true, emailEnabled })
+    const response = await h.load('src/app/api/funnel/submit/route.ts').POST(request({ campaignId: A, customerEmail: 'buyer@example.invalid', orderId: '123', rating: 3, selectedProductIds: [A], feedbackText: 'Synthetic feedback only' }))
+    const body = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(body.success, true)
+    assert.equal(body.promotionDelivered, false)
+    assert.equal(body.manualReview, false)
+    assert.equal(body.deliveryStatus, 'paused')
+    assert.equal(h.queries.find(q => q.table === 'funnel_submissions' && q.op === 'insert').payload.claim_status, 'approved')
+    assert.equal(h.sends.length, 0)
+    assert(!h.queries.some(q => q.rpc === 'reserve_reward'))
+  }
+})
+
+test('paused email returns a non-error notice for approved and legacy claims without sending or mutating them', async () => {
+  for (const action of ['approve', 'deliver']) {
+    for (const options of [{}, { promotionType: 'physical_gift', reservedType: 'coupon_code' }]) {
+      const h = harness({ claimStatus: 'approved', emailEnabled: 'false', ...options })
+      const response = await h.load(`src/app/api/claims/[id]/${action}/route.ts`).POST(request({}), { params: Promise.resolve({ id: B }) })
+      const body = await response.json()
+      assert.equal(response.status, 200)
+      assert.equal(body.delivered, false)
+      assert.equal(body.deliveryStatus, 'paused')
+      assert.equal(h.sends.length, 0)
+      assert(!h.queries.some(q => q.op === 'update' || q.rpc === 'reserve_reward'))
+    }
+  }
+})
+
+test('paused email does not disable fulfillment of physical rewards', async () => {
+  const h = harness({ claimStatus: 'approved', emailEnabled: 'false', promotionType: 'physical_gift' })
+  const response = await h.load('src/app/api/claims/[id]/deliver/route.ts').POST(request({ manualFulfilled: true }), { params: Promise.resolve({ id: B }) })
+  assert.equal(response.status, 200)
+  assert.equal(h.sends.length, 1)
 })
 
 test('automatic email failures are reported as saved but unsent, not manual approval or successful delivery', async () => {

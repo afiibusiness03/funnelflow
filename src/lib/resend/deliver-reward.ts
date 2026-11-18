@@ -2,6 +2,7 @@ import 'server-only'
 import { createServiceClient } from '@/lib/supabase/server'
 import { escapeHtml, HttpError, safeUrl } from '@/lib/security/http'
 import { getResend, FROM } from './client'
+import { rewardEmailEnabled } from './delivery-mode'
 export async function deliverReward(submissionId: string, tenantId: string, approve: boolean) {
   const db = createServiceClient()
   const { data: reservation,error } = await db.rpc('reserve_reward',{p_submission:submissionId,p_tenant:tenantId,p_approve:approve})
@@ -9,6 +10,8 @@ export async function deliverReward(submissionId: string, tenantId: string, appr
   if (reservation.sent) return true
   const p = reservation.payload
   if (!p || !['coupon_code', 'digital_download'].includes(p.type)) return false
+  // Defense in depth if a caller has stale promotion information.
+  if (!rewardEmailEnabled()) throw new HttpError(409, 'Email delivery is temporarily paused. No email was sent.')
   if (Date.now()-new Date(reservation.reserved_at).getTime()>23*3600000) throw new HttpError(409,'Please reconcile this delivery before retrying')
   const title = String(p.title ?? 'the seller').replace(/[\r\n]/g,' ').slice(0,150)
   let reward = ''

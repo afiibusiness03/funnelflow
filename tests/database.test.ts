@@ -111,6 +111,15 @@ test('PostgreSQL migrations enforce tenant isolation, privilege boundaries, quot
       }
       await asRole('service_role',undefined,async()=>{await assert.rejects(db.query(`SELECT reserve_reward('${id(30)}','${id(20)}',false)`))})
     })
+    await t.test('approved claims saved during an email pause can reserve and deliver later without a stale reservation',async()=>{
+      await asRole('service_role',undefined,async()=>{
+        await db.exec(`INSERT INTO funnel_submissions(id,campaign_id,tenant_id,customer_email,promotion_id,claim_status,rating) VALUES('${id(65)}','${id(13)}','${id(10)}','paused@example.invalid','${id(12)}','approved',1)`)
+        assert.equal((await db.query(`SELECT * FROM reward_deliveries WHERE submission_id='${id(65)}'`)).rows.length,0)
+        await db.query(`SELECT reserve_reward('${id(65)}','${id(10)}',true)`)
+        await db.query(`SELECT finish_reward('${id(65)}','${id(10)}','paused-test-email')`)
+        assert.equal((await db.query<{claim_status:string}>(`SELECT claim_status FROM funnel_submissions WHERE id='${id(65)}'`)).rows[0].claim_status,'delivered')
+      })
+    })
     await t.test('manual approval reserves once; cap rejects a second claim',async()=>{
       await db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',true)`)
       await db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',true)`)

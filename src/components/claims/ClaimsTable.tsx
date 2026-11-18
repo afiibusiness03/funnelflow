@@ -33,11 +33,12 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; co
 }
 
 interface ClaimsTableProps {
+  emailDeliveryEnabled: boolean
   claims:    ClaimRow[]
   onRefresh: () => void
 }
 
-export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
+export default function ClaimsTable({ claims, onRefresh, emailDeliveryEnabled }: ClaimsTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   if (claims.length === 0) {
@@ -114,6 +115,7 @@ export default function ClaimsTable({ claims, onRefresh }: ClaimsTableProps) {
               {/* Actions */}
               <div className="col-span-2 min-w-0" onClick={(e) => e.stopPropagation()}>
                 <ClaimActions
+                  emailDeliveryEnabled={emailDeliveryEnabled}
                   promotionType={claim.promotion?.type}
                   claimId={claim.id}
                   status={claim.claim_status}

@@ -22,6 +22,7 @@ export default function ClaimsPage() {
   const [page, setPage]         = useState(1)
   const [totalPages, setTotal]  = useState(1)
   const [counts, setCounts]     = useState<Record<string, number>>({})
+  const [emailDeliveryEnabled, setEmailDeliveryEnabled] = useState(false)
 
   const [refresh, setRefresh] = useState(0)
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function ClaimsPage() {
         if (controller.signal.aborted) return
         setError(null)
         setCounts(result.counts ?? {})
+        setEmailDeliveryEnabled(result.email_delivery_enabled === true)
         setClaims(result.data ?? [])
         setTotal(result.total_pages ?? 1)
       })
@@ -45,6 +47,7 @@ export default function ClaimsPage() {
 
   return (
     <div className="space-y-5">
+      {!loading && !error && !emailDeliveryEnabled && <p role="status" className="rounded-xl border border-amber-300/30 bg-amber-500/10 p-4 text-sm text-amber-700">Email delivery is temporarily paused. Claims are saved, but reward emails will not be sent until email delivery is enabled.</p>}
       {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
       {/* Tabs */}
       <div aria-label="Filter claims by status" className="flex flex-wrap items-center gap-1 bg-slate-800/50 border border-slate-700/50 rounded-xl p-1 w-fit max-w-full">
@@ -108,7 +111,7 @@ export default function ClaimsPage() {
           <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
         </div>
       ) : (
-        <ClaimsTable claims={claims} onRefresh={handleRefresh} />
+        <ClaimsTable claims={claims} onRefresh={handleRefresh} emailDeliveryEnabled={emailDeliveryEnabled} />
       )}
 
       {/* Pagination */}

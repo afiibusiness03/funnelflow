@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useState, useEffect, useRef } from 'react'
+import { useForm, useWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
@@ -35,7 +35,7 @@ function getOrderIdError(platform: string): string {
 }
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
-const makeSchema = (requireVerify: boolean, requiresAddress: boolean) =>
+const makeSchema = (requireVerify: boolean, requiresAddress: boolean, platform: string) =>
   z.object({
     selectedProductIds: z.array(z.string()).min(1, 'Please select at least one product.'),
     rating: z.number().int().min(1, 'Please choose a rating from 1 to 5 stars.').max(5),
@@ -56,6 +56,8 @@ const makeSchema = (requireVerify: boolean, requiresAddress: boolean) =>
         message: 'Please enter your order ID',
         path: ['orderId'],
       })
+    } else if (requireVerify && !validateOrderIdFormat(data.orderId ?? '', platform)) {
+      ctx.addIssue({ code: 'custom', message: getOrderIdError(platform), path: ['orderId'] })
     }
   })
 
@@ -99,12 +101,15 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   const [completed, setCompleted] = useState(false)
   const [submissionResult, setSubmissionResult] = useState<any>(null)
   const [couponCopied, setCouponCopied] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const serverErrorRef = useRef<HTMLDivElement>(null)
 
   const platform = campaign.product?.platform ?? 'amazon'
   const requireVerify = campaign.require_order_verify
 
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(makeSchema(requireVerify, !!campaign.promotion?.requires_address)),
+    resolver: zodResolver(makeSchema(requireVerify, !!campaign.promotion?.requires_address, platform)),
+    shouldFocusError: false,
     defaultValues: {
       feedbackText: '',
       selectedProductIds: [],
@@ -114,6 +119,29 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
 
   const selectedProductIds = useWatch({ control, name: 'selectedProductIds' })
   const rating = useWatch({ control, name: 'rating' })
+
+  function revealError(element: HTMLElement) {
+    const input = element.matches('input, textarea') ? element : element.querySelector<HTMLElement>('input, textarea')
+    const focusTarget = input ?? element
+    focusTarget.focus({ preventScroll: true })
+    element.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+  }
+
+  const onInvalid = (fieldErrors: FieldErrors<FormData>) => {
+    // Follow visual form order, including custom product/rating groups.
+    requestAnimationFrame(() => {
+      const fields = formRef.current?.querySelectorAll<HTMLElement>('[data-error-field]') ?? []
+      for (const element of fields) {
+        const path = element.dataset.errorField!.split('.')
+        const error = path.reduce<any>((value, key) => value?.[key], fieldErrors)
+        if (error) { revealError(element); break }
+      }
+    })
+  }
+
+  useEffect(() => {
+    if (serverError && serverErrorRef.current) revealError(serverErrorRef.current)
+  }, [serverError])
 
   // Confetti effect when completed
   useEffect(() => {
@@ -170,15 +198,6 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   const onSubmit = async (data: FormData) => {
     setServerError(null)
 
-    // 1. Verify Order ID format if required
-    if (requireVerify) {
-      const orderId = data.orderId?.trim() ?? ''
-      if (!validateOrderIdFormat(orderId, platform)) {
-        setServerError(getOrderIdError(platform))
-        return
-      }
-
-    }
     setSubmitting(true)
 
     try {
@@ -308,6 +327,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           </p>
         )}
 
+        {submissionResult?.deliveryStatus === 'paused' && (
+          <p role="status" className="mb-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+            Your claim has been saved. Reward emails are temporarily paused, so no reward email has been sent. You do not need to submit again.
+          </p>
+        )}
+
         {submissionResult?.promotionDelivered && (
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-5 flex items-center gap-2.5 text-left">
             <Mail className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -325,8 +350,8 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   }
 
   return (
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <fieldset className="min-w-0" aria-describedby="product-selection-help product-selection-error">
+      <form ref={formRef} noValidate onSubmit={event => { void handleSubmit(onSubmit, onInvalid)(event) }} className="space-y-5">
+        <fieldset data-error-field="selectedProductIds" tabIndex={-1} className="min-w-0 scroll-mt-6" aria-describedby="product-selection-help product-selection-error">
           <legend className="text-slate-900 font-bold text-base">What did you purchase? <span className="text-red-500">*</span></legend>
           <p id="product-selection-help" className="mt-1 text-slate-500 text-xs leading-relaxed">Choose one or more products to include in your review.</p>
           <div className="flex flex-wrap items-center justify-between gap-2 my-3">
@@ -360,7 +385,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           {errors.selectedProductIds && <p id="product-selection-error" role="alert" className="mt-2 text-xs font-medium text-red-600">{errors.selectedProductIds.message}</p>}
         </fieldset>
         {serverError && (
-          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">
+          <div ref={serverErrorRef} tabIndex={-1} role="alert" className="scroll-mt-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">
             {serverError}
           </div>
         )}
@@ -371,7 +396,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
 
           {/* Order ID */}
           {requireVerify && (
-            <div>
+            <div data-error-field="orderId" className="scroll-mt-6">
               <label htmlFor="review-order" className="block text-xs font-bold text-slate-700 mb-1">
                 Order ID <span className="text-red-500">*</span>
               </label>
@@ -389,7 +414,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           )}
 
           {/* Email */}
-          <div>
+          <div data-error-field="email" className="scroll-mt-6">
             <label htmlFor="review-email" className="block text-xs font-bold text-slate-700 mb-1">
               Email Address <span className="text-red-500">*</span>
             </label>
@@ -425,7 +450,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           <h3 className="text-slate-900 font-extrabold text-sm">2. Rating & Review</h3>
 
           {/* Ratings are empty until the customer explicitly chooses one. */}
-          <fieldset className="min-w-0" aria-describedby="rating-hint rating-error">
+          <fieldset data-error-field="rating" tabIndex={-1} className="min-w-0 scroll-mt-6" aria-describedby="rating-hint rating-error">
             <legend className="mb-2 text-xs font-bold text-slate-700">Overall Experience <span className="text-red-500">*</span></legend>
             <div className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2">
               {[1, 2, 3, 4, 5].map(star => (
@@ -440,7 +465,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           </fieldset>
 
           {/* Review Text */}
-          <div>
+          <div data-error-field="feedbackText" className="scroll-mt-6">
             <label htmlFor="review-feedback" className="block text-xs font-bold text-slate-700 mb-1">
               Your Review / Feedback <span className="text-red-500">* (Min 10 characters)</span>
             </label>
@@ -463,7 +488,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
         {campaign.promotion?.requires_address && <fieldset className="space-y-3">
           <legend className="text-sm font-bold text-slate-800">Shipping address</legend>
           <p className="text-xs text-slate-500">Your seller needs this address to send your physical reward.</p>
-          {([{ key: 'line1', label: 'Street address', auto: 'address-line1' }, { key: 'city', label: 'City', auto: 'address-level2' }, { key: 'zip', label: 'Postal code', auto: 'postal-code' }, { key: 'country', label: 'Country', auto: 'country-name' }] as const).map(field => <label key={field.key} className="block text-xs font-bold text-slate-700">
+          {([{ key: 'line1', label: 'Street address', auto: 'address-line1' }, { key: 'city', label: 'City', auto: 'address-level2' }, { key: 'zip', label: 'Postal code', auto: 'postal-code' }, { key: 'country', label: 'Country', auto: 'country-name' }] as const).map(field => <label data-error-field={`shippingAddress.${field.key}`} key={field.key} className="block scroll-mt-6 text-xs font-bold text-slate-700">
             {field.label}
             <input {...register(`shippingAddress.${field.key}`)} autoComplete={field.auto} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900" />
             {errors.shippingAddress?.[field.key] && <span className="text-red-500">{errors.shippingAddress[field.key]?.message}</span>}
