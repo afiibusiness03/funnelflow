@@ -86,8 +86,30 @@ test('PostgreSQL migrations enforce tenant isolation, privilege boundaries, quot
     await t.test('duplicate email normalization prevents claim reuse',async()=>{
       await asRole('service_role',undefined,async()=>{await assert.rejects(db.exec(`INSERT INTO funnel_submissions(campaign_id,tenant_id,customer_email) VALUES('${id(13)}','${id(10)}','BUYER@example.invalid')`))})
     })
-    await t.test('unverified orders cannot auto-reserve a reward',async()=>{
-      await asRole('service_role',undefined,async()=>{await assert.rejects(db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',false)`))})
+    await t.test('automatic rewards reserve without order approval and preserve unverified status',async()=>{
+      await asRole('service_role',undefined,async()=>{
+        await db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',false)`)
+        await db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',false)`)
+        const claim=(await db.query<{claim_status:string;order_verified:boolean}>(`SELECT claim_status,order_verified FROM funnel_submissions WHERE id='${id(30)}'`)).rows[0]
+        assert.equal(claim.claim_status,'approved')
+        assert.equal(claim.order_verified,false)
+        assert.equal((await db.query<{redemptions_count:number}>(`SELECT redemptions_count FROM promotions WHERE id='${id(12)}'`)).rows[0].redemptions_count,1)
+      })
+    })
+    await t.test('automatic delivery still rejects flagged, manual, foreign-tenant and unavailable claims',async()=>{
+      for (const change of [
+        `UPDATE funnel_submissions SET is_flagged=true WHERE id='${id(30)}'`,
+        `UPDATE promotions SET auto_deliver=false WHERE id='${id(12)}'`,
+        `UPDATE promotions SET is_active=false WHERE id='${id(12)}'`,
+        `UPDATE promotions SET type='physical_gift' WHERE id='${id(12)}'`,
+        `UPDATE campaigns SET status='paused' WHERE id='${id(13)}'`,
+      ]) {
+        await asRole('service_role',undefined,async()=>{
+          await db.exec(change)
+          await assert.rejects(db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',false)`))
+        })
+      }
+      await asRole('service_role',undefined,async()=>{await assert.rejects(db.query(`SELECT reserve_reward('${id(30)}','${id(20)}',false)`))})
     })
     await t.test('manual approval reserves once; cap rejects a second claim',async()=>{
       await db.query(`SELECT reserve_reward('${id(30)}','${id(10)}',true)`)

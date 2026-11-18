@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { resend } from '@/lib/resend/client'
+import { getResend } from '@/lib/resend/client'
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET
-  if (!secret) return NextResponse.json({error:'Webhook unavailable'},{status:503})
+  if (!secret || !process.env.RESEND_API_KEY?.trim()) return NextResponse.json({error:'Webhook unavailable'},{status:503})
   let event
   try {
-    event = resend.webhooks.verify({payload:await request.text(),headers:{id:request.headers.get('svix-id') ?? '',timestamp:request.headers.get('svix-timestamp') ?? '',signature:request.headers.get('svix-signature') ?? ''},webhookSecret:secret})
+    event = getResend().webhooks.verify({payload:await request.text(),headers:{id:request.headers.get('svix-id') ?? '',timestamp:request.headers.get('svix-timestamp') ?? '',signature:request.headers.get('svix-signature') ?? ''},webhookSecret:secret})
   } catch { return NextResponse.json({error:'Invalid signature'},{status:400}) }
   const status: Record<string,string> = {'email.sent':'sent','email.delivered':'delivered','email.bounced':'bounced','email.failed':'failed'}
   const db=createServiceClient()

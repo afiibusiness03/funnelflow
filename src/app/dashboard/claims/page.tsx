@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ClaimsTable, { type ClaimRow } from '@/components/claims/ClaimsTable'
 import { Inbox, Clock, CheckCircle, Truck, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/helpers'
+import { readApiResponse } from '@/lib/utils/api-response'
 
 const FILTERS = [
   { value: '',          label: 'All',       icon: Inbox        },
@@ -28,11 +29,7 @@ export default function ClaimsPage() {
     const params = new URLSearchParams({ page: String(page), per_page: '20' })
     if (status) params.set('status', status)
     fetch(`/api/claims?${params}`, { signal: controller.signal })
-      .then(async response => {
-        const result = await response.json()
-        if (!response.ok) throw new Error(result.error ?? 'Unable to load claims')
-        return result
-      })
+      .then(readApiResponse)
       .then(result => {
         if (controller.signal.aborted) return
         setError(null)

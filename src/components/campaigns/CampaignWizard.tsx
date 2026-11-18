@@ -501,8 +501,8 @@ export default function CampaignWizard({ products, promotions }: CampaignWizardP
               {/* Order Verification */}
               <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-900 rounded-lg border border-slate-700">
                 <div>
-                  <p className="text-slate-200 text-sm font-medium">Require order verification</p>
-                  <p className="text-slate-500 text-xs mt-0.5">Customer must enter their order ID to proceed</p>
+                  <p className="text-slate-200 text-sm font-medium">Require order number</p>
+                  <p className="text-slate-500 text-xs mt-0.5">Collect the order number. Auto-delivery does not verify the purchase or wait for approval.</p>
                 </div>
                 <input type="checkbox" {...register('require_order_verify')} className="sr-only peer" id="order_verify" />
                 <label htmlFor="order_verify" className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative cursor-pointer transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />

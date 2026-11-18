@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CheckCircle, XCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/helpers'
+import { readApiResponse } from '@/lib/utils/api-response'
 
 interface ClaimActionsProps {
   promotionType?: string
@@ -28,8 +29,9 @@ export default function ClaimActions({ claimId, status, isFlagged, promotionType
         headers: { 'Content-Type': 'application/json' },
         body: action === 'reject' ? JSON.stringify({ reason: 'Rejected by seller' }) : JSON.stringify({ manualFulfilled: action === 'deliver' && manual }),
       })
-      if (!res.ok) { const result = await res.json(); throw new Error(result.error ?? 'Action failed') }
-      if (res.ok) {
+      const result = await readApiResponse(res)
+      if (result.success !== true) throw new Error('The server did not confirm this action. Refresh the claims list before retrying.')
+      if (result.success) {
         setDone(true)
         setTimeout(() => { setDone(false); onSuccess() }, 800)
       }

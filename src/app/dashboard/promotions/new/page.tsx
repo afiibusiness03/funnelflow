@@ -352,7 +352,7 @@ export default function NewPromotionPage() {
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <div>
                 <p className="text-slate-300 text-sm">Auto-deliver</p>
-                <p className="text-slate-500 text-xs">Send promotion automatically after funnel completes</p>
+                <p className="text-slate-500 text-xs">Send coupons and download links immediately, without order approval. Other reward types need manual fulfillment.</p>
               </div>
               <input type="checkbox" {...register('auto_deliver')} className="sr-only peer" />
               <div className="shrink-0 w-10 h-5 bg-slate-700 peer-checked:bg-purple-600 rounded-full relative transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-5" />

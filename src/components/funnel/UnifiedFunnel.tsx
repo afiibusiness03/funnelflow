@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { cn } from '@/lib/utils/helpers'
+import { readApiResponse } from '@/lib/utils/api-response'
 import { Loader2, Package, Star, CheckCircle, Mail } from 'lucide-react'
 
 // ─── Platform Order ID Rules ──────────────────────────────────────────────
@@ -36,6 +37,8 @@ function getOrderIdError(platform: string): string {
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 const makeSchema = (requireVerify: boolean, requiresAddress: boolean) =>
   z.object({
+    selectedProductIds: z.array(z.string()).min(1, 'Please select at least one product.'),
+    rating: z.number().int().min(1, 'Please choose a rating from 1 to 5 stars.').max(5),
     email: z.string().email('Please enter a valid email address'),
     name: z.string().optional(),
     orderId: z.string().optional(),
@@ -89,20 +92,8 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
     ? campaign.products
     : (campaign.product ? [campaign.product] : [])
 
-  const fallbackProduct: ProductItem = {
-    id: 'default-prod',
-    name: campaign.name || 'Your Purchased Product',
-    image_url: null,
-  }
+  const activeProducts = productsList
 
-  const activeProducts = productsList.length > 0 ? productsList : [fallbackProduct]
-
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
-    activeProducts.map(p => p.id)
-  )
-
-  const [rating, setRating] = useState<number>(5)
-  const [hoverRating, setHoverRating] = useState<number>(0)
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
@@ -112,12 +103,17 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   const platform = campaign.product?.platform ?? 'amazon'
   const requireVerify = campaign.require_order_verify
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(makeSchema(requireVerify, !!campaign.promotion?.requires_address)),
     defaultValues: {
       feedbackText: '',
+      selectedProductIds: [],
+      rating: 0,
     },
   })
+
+  const selectedProductIds = useWatch({ control, name: 'selectedProductIds' })
+  const rating = useWatch({ control, name: 'rating' })
 
   // Confetti effect when completed
   useEffect(() => {
@@ -197,19 +193,16 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           orderId: data.orderId ?? '',
           platform: campaign.product?.platform,
           marketplace: campaign.product?.marketplace,
-          rating,
+          rating: data.rating,
           feedbackText: data.feedbackText,
           promotionId: campaign.promotion?.id,
           shippingAddress: campaign.promotion?.requires_address ? data.shippingAddress : undefined,
-          selectedProductIds: selectedProductIds.filter((id) => id && id !== 'default-prod'),
+          selectedProductIds: data.selectedProductIds,
         }),
       })
 
-      const json = await res.json()
-      if (!res.ok) {
-        setServerError(json.error ?? 'Submission failed')
-        return
-      }
+      const json = await readApiResponse(res)
+      if (json.success !== true) throw new Error('Submission was not confirmed. Please contact the seller before trying again.')
 
       setSubmissionResult({
         ...json,
@@ -219,7 +212,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
       })
       setCompleted(true)
     } catch (err) {
-      setServerError('An unexpected error occurred. Please try again.')
+      setServerError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -309,6 +302,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           </p>
         )}
 
+        {submissionResult?.deliveryStatus === 'failed' && (
+          <p role="alert" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+            Your claim has been saved, but we could not confirm that your reward email was sent. Please contact the seller; you do not need to submit another claim.
+          </p>
+        )}
+
         {submissionResult?.promotionDelivered && (
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-5 flex items-center gap-2.5 text-left">
             <Mail className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -326,73 +325,42 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
   }
 
   return (
-    <div className="space-y-6">
-      {/* 1. Multi-Product or Single Product Display */}
-      {activeProducts.length > 1 ? (
-        <div className="space-y-2.5">
-          <label className="block text-slate-900 font-extrabold text-sm">
-            Select the product(s) you purchased <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-2">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <fieldset className="min-w-0" aria-describedby="product-selection-help product-selection-error">
+          <legend className="text-slate-900 font-bold text-base">What did you purchase? <span className="text-red-500">*</span></legend>
+          <p id="product-selection-help" className="mt-1 text-slate-500 text-xs leading-relaxed">Choose one or more products to include in your review.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 my-3">
+            <span aria-live="polite" className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{selectedProductIds.length} selected</span>
+            <button type="button" disabled={!selectedProductIds.length} onClick={() => setValue('selectedProductIds', [], { shouldValidate: true })} className="min-h-11 text-xs text-slate-500 underline underline-offset-4 disabled:opacity-40">Clear selection</button>
+          </div>
+          <div className="grid grid-cols-2 min-[375px]:grid-cols-3 gap-2 sm:gap-3">
             {activeProducts.map((prod) => {
               const isSelected = selectedProductIds.includes(prod.id)
               return (
-                <div
-                  key={prod.id}
-                  onClick={() => {
-                    if (isSelected) {
-                      if (selectedProductIds.length > 1) {
-                        setSelectedProductIds(selectedProductIds.filter((id) => id !== prod.id))
-                      }
-                    } else {
-                      setSelectedProductIds([...selectedProductIds, prod.id])
-                    }
-                  }}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border transition cursor-pointer',
-                    isSelected ? 'bg-indigo-50/80 border-[#6366f1] shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    readOnly
-                    className="w-4 h-4 rounded text-[#6366f1] focus:ring-[#6366f1] cursor-pointer"
-                  />
-                  <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden border border-slate-300/60">
+                <label key={prod.id} className={cn(
+                  'relative min-w-0 cursor-pointer rounded-xl border p-2 transition focus-within:ring-2 focus-within:ring-indigo-400 focus-within:ring-offset-2',
+                  isSelected ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white border-slate-200 hover:border-slate-400'
+                )}>
+                  <input type="checkbox" aria-label={prod.name} checked={isSelected}
+                    aria-invalid={!!errors.selectedProductIds} aria-describedby="product-selection-error"
+                    onChange={(event) => setValue('selectedProductIds', event.target.checked ? [...selectedProductIds, prod.id] : selectedProductIds.filter(id => id !== prod.id), { shouldValidate: true })}
+                    className="absolute right-3 top-3 z-10 h-5 w-5 cursor-pointer accent-indigo-600" />
+                  <span className="flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-slate-50 p-2">
                     {prod.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="w-5 h-5 text-slate-400" />
-                    )}
-                  </div>
-                  <span className="text-slate-900 font-bold text-sm flex-1 truncate">{prod.name}</span>
-                </div>
+                      <img src={prod.image_url} alt="" width={160} height={160} loading="lazy" className="h-full w-full object-contain" />
+                    ) : <Package aria-hidden="true" className="h-10 w-10 text-slate-400" />}
+                  </span>
+                  <span className="mt-2 block break-words text-xs font-semibold leading-relaxed text-slate-900">{prod.name}</span>
+                </label>
               )
             })}
           </div>
-        </div>
-      ) : activeProducts.length === 1 ? (
-        <div className="flex items-center gap-3 p-3 bg-slate-100/80 rounded-2xl border border-slate-200/80">
-          <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-xs">
-            {activeProducts[0].image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={activeProducts[0].image_url} alt={activeProducts[0].name} className="w-full h-full object-cover" />
-            ) : (
-              <Package className="w-6 h-6 text-slate-400" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-slate-500 text-xs font-medium">Product Purchased</p>
-            <p className="text-slate-900 font-bold text-sm truncate">{activeProducts[0].name}</p>
-          </div>
-        </div>
-      ) : null}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {!activeProducts.length && <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No products are available for this campaign. Please contact the seller.</p>}
+          {errors.selectedProductIds && <p id="product-selection-error" role="alert" className="mt-2 text-xs font-medium text-red-600">{errors.selectedProductIds.message}</p>}
+        </fieldset>
         {serverError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">
             {serverError}
           </div>
         )}
@@ -404,11 +372,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           {/* Order ID */}
           {requireVerify && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label htmlFor="review-order" className="block text-xs font-bold text-slate-700 mb-1">
                 Order ID <span className="text-red-500">*</span>
               </label>
               <input
                 {...register('orderId')}
+                id="review-order"
                 placeholder={getOrderIdPlaceholder(platform)}
                 className={cn(
                   'w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6366f1]/30 transition text-sm font-medium',
@@ -421,11 +390,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="review-email" className="block text-xs font-bold text-slate-700 mb-1">
               Email Address <span className="text-red-500">*</span>
             </label>
             <input
               {...register('email')}
+              id="review-email"
               type="email"
               placeholder="you@example.com"
               className={cn(
@@ -438,11 +408,12 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
 
           {/* Name */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="review-name" className="block text-xs font-bold text-slate-700 mb-1">
               Your Name <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <input
               {...register('name')}
+              id="review-name"
               placeholder="John Smith"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6366f1]/30 transition text-sm font-medium"
             />
@@ -453,41 +424,31 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
         <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70">
           <h3 className="text-slate-900 font-extrabold text-sm">2. Rating & Review</h3>
 
-          {/* Star Rating */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-2">Overall Experience</label>
-            <div className="flex items-center gap-2 justify-center py-2 bg-white rounded-xl border border-slate-200">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  className="p-1 transition transform active:scale-125"
-                >
-                  <Star
-                    className={cn(
-                      'w-8 h-8 transition',
-                      (hoverRating || rating) >= star
-                        ? 'fill-amber-400 text-amber-400 drop-shadow-xs'
-                        : 'fill-slate-100 text-slate-300'
-                    )}
-                  />
-                </button>
+          {/* Ratings are empty until the customer explicitly chooses one. */}
+          <fieldset className="min-w-0" aria-describedby="rating-hint rating-error">
+            <legend className="mb-2 text-xs font-bold text-slate-700">Overall Experience <span className="text-red-500">*</span></legend>
+            <div className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2">
+              {[1, 2, 3, 4, 5].map(star => (
+                <label key={star} className="relative flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-lg transition hover:bg-amber-50 focus-within:ring-2 focus-within:ring-indigo-400">
+                  <input name="rating" type="radio" value={star} checked={rating === star} onChange={() => setValue('rating', star, { shouldValidate: true, shouldDirty: true })} aria-label={star === 1 ? '1 star' : star + ' stars'} className="sr-only" />
+                  <Star aria-hidden="true" className={cn('h-7 w-7 sm:h-8 sm:w-8', rating >= star ? 'fill-amber-400 text-amber-400' : 'fill-none text-slate-300')} />
+                </label>
               ))}
             </div>
-          </div>
+            <p id="rating-hint" aria-live="polite" className="mt-2 text-xs text-slate-500">{rating ? rating + ' of 5 stars selected' : 'No rating yet — choose from 1 to 5 stars.'}</p>
+            {errors.rating && <p id="rating-error" role="alert" className="mt-1 text-xs font-medium text-red-600">{errors.rating.message}</p>}
+          </fieldset>
 
           {/* Review Text */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="review-feedback" className="block text-xs font-bold text-slate-700 mb-1">
               Your Review / Feedback <span className="text-red-500">* (Min 10 characters)</span>
             </label>
             <textarea
               {...register('feedbackText')}
+              id="review-feedback"
               rows={3}
-              placeholder="Tell us what you liked about your purchase..."
+              placeholder="What stood out? What could be better?"
               className={cn(
                 'w-full px-4 py-2.5 rounded-xl border bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#6366f1]/30 transition text-sm font-medium',
                 errors.feedbackText ? 'border-red-400' : 'border-slate-300'
@@ -512,7 +473,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
         {/* 4. Single Submit Button */}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !activeProducts.length}
           className="w-full bg-[#6366f1] hover:bg-[#4f46e5] disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold py-4 px-6 rounded-2xl transition shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 text-base tracking-wide"
         >
           {submitting ? (
@@ -525,6 +486,5 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
           )}
         </button>
       </form>
-    </div>
   )
 }

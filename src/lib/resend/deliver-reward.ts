@@ -1,7 +1,7 @@
 import 'server-only'
 import { createServiceClient } from '@/lib/supabase/server'
 import { escapeHtml, HttpError, safeUrl } from '@/lib/security/http'
-import { resend, FROM } from './client'
+import { getResend, FROM } from './client'
 export async function deliverReward(submissionId: string, tenantId: string, approve: boolean) {
   const db = createServiceClient()
   const { data: reservation,error } = await db.rpc('reserve_reward',{p_submission:submissionId,p_tenant:tenantId,p_approve:approve})
@@ -15,8 +15,9 @@ export async function deliverReward(submissionId: string, tenantId: string, appr
   if (p.type==='coupon_code' && p.coupon_code) reward=`<p>Your coupon: <strong>${escapeHtml(p.coupon_code)}</strong></p>`
   else if (p.type==='digital_download' && safeUrl.safeParse(p.download_url).success) reward=`<p><a href="${escapeHtml(p.download_url)}">Download your reward</a></p>`
   else throw new HttpError(409,'This reward needs manual fulfillment')
+  const resend = getResend()
   const { data:result,error:sendError } = await resend.emails.send({from:FROM,to:p.customer_email,subject:`Your reward from ${title}`,html:`<h2>Thank you!</h2><p>${escapeHtml(p.delivery_message || 'Your reward is ready.')}</p>${reward}`},{idempotencyKey:`reward/${submissionId}`})
-  if (sendError || !result?.id) throw new HttpError(502,'Email delivery failed. Please retry later.')
+  if (sendError || !result?.id) throw new HttpError(502,'Email delivery failed. Check the Resend API key, verified sender domain and sending limits, then retry.')
   const { error:finishError } = await db.rpc('finish_reward',{p_submission:submissionId,p_tenant:tenantId,p_resend_id:result.id})
   if (finishError) throw new HttpError(503,'Delivery confirmation pending. Please retry later.')
   return true

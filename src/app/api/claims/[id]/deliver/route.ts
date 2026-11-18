@@ -18,7 +18,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!claim) throw new HttpError(404, 'Claim not found')
     if (!['approved','delivered'].includes(claim.claim_status)) throw new HttpError(409, 'Approve the claim first')
     const body = await readJson(request, z.object({ manualFulfilled: z.boolean().optional() }))
-    let delivered = await deliverReward(id,profile.tenant_id,false)
+    // The authenticated seller is delivering an already-approved claim, including
+    // legacy approvals that predate reward reservations.
+    let delivered = await deliverReward(id,profile.tenant_id,true)
     if (!delivered && body.manualFulfilled) {
       const { error } = await db.rpc('finish_manual_reward', { p_submission: id, p_tenant: profile.tenant_id })
       if (error) throw new HttpError(409, 'Unable to confirm manual fulfillment')
