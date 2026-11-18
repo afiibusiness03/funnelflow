@@ -83,8 +83,36 @@ test('PostgreSQL migrations enforce tenant isolation, privilege boundaries, quot
       })
     })
     await db.exec(`INSERT INTO funnel_submissions(id,campaign_id,tenant_id,customer_email,promotion_id,rating) VALUES('${id(30)}','${id(13)}','${id(10)}','buyer@example.invalid','${id(12)}',5),('${id(31)}','${id(13)}','${id(10)}','other@example.invalid','${id(12)}',4)`)
-    await t.test('duplicate email normalization prevents claim reuse',async()=>{
-      await asRole('service_role',undefined,async()=>{await assert.rejects(db.exec(`INSERT INTO funnel_submissions(campaign_id,tenant_id,customer_email) VALUES('${id(13)}','${id(10)}','BUYER@example.invalid')`))})
+    await t.test('repeat email claims without an order are accepted and email normalization is preserved',async()=>{
+      await asRole('service_role',undefined,async()=>{
+        for (const [index,status] of ['pending','approved','delivered','rejected'].entries()) {
+          await db.exec(`INSERT INTO funnel_submissions(id,campaign_id,tenant_id,customer_email,order_id,claim_status) VALUES('${id(70+index)}','${id(13)}','${id(10)}',' BUYER@example.invalid ','   ','${status}')`)
+        }
+        const {rows}=await db.query<{customer_email:string;order_id:string|null}>(`SELECT customer_email,order_id FROM funnel_submissions WHERE id IN ('${id(70)}','${id(71)}','${id(72)}','${id(73)}')`)
+        assert.equal(rows.length,4)
+        assert(rows.every(row=>row.customer_email==='buyer@example.invalid' && row.order_id===null))
+      })
+    })
+    await t.test('repeat email claims with different orders are accepted within one campaign',async()=>{
+      await asRole('service_role',undefined,async()=>{
+        await db.exec(`INSERT INTO funnel_submissions(id,campaign_id,tenant_id,customer_email,order_id) VALUES('${id(74)}','${id(13)}','${id(10)}','buyer@example.invalid','ORDER-A'),('${id(75)}','${id(13)}','${id(10)}','BUYER@example.invalid','ORDER-B')`)
+        assert.equal((await db.query(`SELECT id FROM funnel_submissions WHERE id IN ('${id(74)}','${id(75)}')`)).rows.length,2)
+      })
+    })
+    await t.test('the same order is rejected even with a different email or surrounding whitespace',async()=>{
+      for (const email of ['buyer@example.invalid','another@example.invalid']) {
+        await asRole('service_role',undefined,async()=>{
+          await db.exec(`INSERT INTO funnel_submissions(campaign_id,tenant_id,customer_email,order_id) VALUES('${id(13)}','${id(10)}','buyer@example.invalid',' ORDER-A ')`)
+          await assert.rejects(db.exec(`INSERT INTO funnel_submissions(campaign_id,tenant_id,customer_email,order_id) VALUES('${id(13)}','${id(10)}','${email}','ORDER-A')`), (error:any)=>error.code==='23505')
+        })
+      }
+    })
+    await t.test('order uniqueness is scoped to the campaign',async()=>{
+      await asRole('service_role',undefined,async()=>{
+        await db.exec(`INSERT INTO campaigns(id,tenant_id,name,product_id,status,qr_short_code) VALUES('${id(76)}','${id(10)}','Another campaign','${id(11)}','active','test-repeat-email')`)
+        await db.exec(`INSERT INTO funnel_submissions(campaign_id,tenant_id,customer_email,order_id) VALUES('${id(13)}','${id(10)}','buyer@example.invalid','ORDER-A'),('${id(76)}','${id(10)}','buyer@example.invalid','ORDER-A')`)
+        assert.equal((await db.query(`SELECT id FROM funnel_submissions WHERE order_id='ORDER-A'`)).rows.length,2)
+      })
     })
     await t.test('automatic rewards reserve without order approval and preserve unverified status',async()=>{
       await asRole('service_role',undefined,async()=>{

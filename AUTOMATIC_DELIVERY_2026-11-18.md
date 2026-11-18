@@ -6,7 +6,7 @@ Reward email is now **paused by default** until the server-only environment vari
 
 - Eligible automatic coupon/download claims are saved as `approved`, with `deliveryStatus: paused`, without contacting Resend or creating a reward reservation. They are not marked delivered and do not consume a redemption reservation yet.
 - The customer sees that the claim is saved and email is paused. The dashboard displays a pause notice and disables email delivery actions. Protected API actions also return a normal paused response, rather than a 502 or a false delivery success.
-- Duplicate protection remains active. A 409 means an existing claim should be used, not submitted again.
+- As of November 19, repeat claims using the same email are allowed after applying `20261119_allow_repeat_claim_emails.sql`. A 409 blocks only reuse of a non-empty order number within the same campaign.
 - Physical/manual fulfillment stays separate and available. No historical claims or email reservations are modified by this update.
 - Validation now scrolls to and focuses the first invalid field in visual order, including products, order number, email, rating, feedback and shipping. Server errors are brought into view too.
 
@@ -18,7 +18,7 @@ When email is enabled, an active coupon or digital-download promotion with **Aut
 
 Successful provider acceptance and database confirmation move the claim to `delivered`. Failed or unconfirmed sends remain unsent and are available for seller retry; the customer is told their claim was saved and not to resubmit. This change does not introduce a background retry worker or guarantee inbox delivery. Manual promotions and physical/gift-card/loyalty rewards still require actual fulfillment.
 
-Duplicate-claim protection, tenant isolation, fraud flags, redemption limits and provider idempotency remain in place. Historical claims are not automatically emailed by deploying this change.
+Order-based duplicate protection, tenant isolation, fraud flags, redemption limits and provider idempotency remain in place. Historical claims are not automatically emailed by deploying this change.
 
 ## Earlier automatic-delivery migration (needed when enabling email)
 

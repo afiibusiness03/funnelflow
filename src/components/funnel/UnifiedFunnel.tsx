@@ -343,7 +343,7 @@ export default function UnifiedFunnel({ campaign, brandColor }: UnifiedFunnelPro
         )}
 
         <p className="text-slate-500 text-xs mt-6 leading-relaxed border-t border-slate-200 pt-4">
-          * Limit one free item per household or customer. Offer valid with eligible purchases. Proof of purchase required. Offer not dependent on feedback sentiment. Subject to availability.
+          * Offer valid with eligible purchases. Proof of purchase required. Offer not dependent on feedback sentiment. Subject to availability.
         </p>
       </div>
     )

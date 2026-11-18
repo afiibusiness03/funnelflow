@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       review_requested:reviewRequested,claim_status:emailPaused ? 'approved' : 'pending',is_flagged:false,ip_address:clientIp(request),
       user_agent:request.headers.get('user-agent')?.slice(0,512) ?? null,
     }).select('id').single()
-    if (insertError?.code === '23505') throw new HttpError(409,'A claim for this email or order already exists')
+    if (insertError?.code === '23505') throw new HttpError(409,'A claim for this order already exists in this campaign')
     if (insertError?.code === '23514') throw new HttpError(400,'Invalid campaign or product selection')
     if (insertError || !submission) throw insertError ?? new Error('Submission failed')
     // Essential completion event is inserted by a DB trigger in this same transaction.

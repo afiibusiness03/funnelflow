@@ -157,7 +157,7 @@ export default function StepComplete({
       </p>
 
       <p className="text-slate-400 text-xs mt-6 px-2 leading-relaxed">
-        * Limit one free item per household or customer. Offer only valid with 
+        * Offer only valid with
         full-priced purchases. Proof of purchase required. No additional purchase 
         is necessary. Our offer is not dependent on the quality of feedback that 
         you provide. Offer only valid while supplies last. Subject to change or 

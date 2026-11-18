@@ -210,11 +210,11 @@ test('one-star reviews with one or several explicitly selected products are acce
   }
 })
 
-test('database duplicate claims remain rejected without sending another reward', async () => {
+test('database duplicate orders remain rejected without sending another reward', async () => {
   const h = harness({ duplicateClaim: true })
   const response = await h.load('src/app/api/funnel/submit/route.ts').POST(request({ campaignId: A, customerEmail: 'buyer@example.invalid', orderId: '123', rating: 3, selectedProductIds: [A], feedbackText: 'Synthetic feedback only' }))
   assert.equal(response.status, 409)
-  assert.equal((await response.json()).error, 'A claim for this email or order already exists')
+  assert.equal((await response.json()).error, 'A claim for this order already exists in this campaign')
   assert.equal(h.sends.length, 0)
 })
 
